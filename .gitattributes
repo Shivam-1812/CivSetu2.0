@@ -1,0 +1,10 @@
+# Store and check out text with LF everywhere (matches .editorconfig); Windows scripts keep CRLF
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+*.jar binary
+*.png binary
+*.jpg binary
+*.zip binary
+*.docx binary

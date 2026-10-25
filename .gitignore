@@ -1,0 +1,24 @@
+# IDE (shared run configurations live in .run/ and are committed)
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# Secrets — commit .env.example only
+.env
+*.env
+!.env.example
+
+# Build output and local data
+target/
+out/
+uploads/
+*.log
+
+# Old project archive (idea reference only, never committed)
+docs/*.zip
+
+# OS
+.DS_Store
+Thumbs.db

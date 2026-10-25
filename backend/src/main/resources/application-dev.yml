@@ -1,0 +1,16 @@
+spring:
+  docker:
+    compose:
+      # Starts backend/compose.yaml (PostGIS) and leaves it running between restarts
+      file: compose.yaml
+      lifecycle-management: start-only
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+logging:
+  level:
+    com.civsetu: DEBUG

@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "CivSetu (local)",
+      "Group": "CivSetu",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "civsetu",
+      "Username": "civsetu",
+      "SSLMode": "prefer"
+    }
+  }
+}
