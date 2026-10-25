@@ -1,0 +1,109 @@
+# CivSetu backend
+
+Spring Boot 4.1 API for CivSetu, a civic issue reporting and resolution system. Citizens report
+problems with a location and photos, Admins route them to departments, and Authorities resolve them.
+
+**Stack:** Java 17 · Spring Boot 4.1 (Web MVC, Security, Data JPA, Validation, Actuator) ·
+PostgreSQL 17 + PostGIS · Flyway · JWT (OAuth2 Resource Server) · Testcontainers · Maven
+
+## Run it locally
+
+Prerequisites: JDK 17, Docker Desktop. Maven is not needed (use the wrapper).
+
+```powershell
+cd backend
+copy .env.example .env      # then fill in the values (see comments in the file)
+.\mvnw.cmd spring-boot:run  # starts PostGIS + pgAdmin via Docker Compose, then the API
+```
+
+| What | Where |
+|---|---|
+| API | http://localhost:8080/api/v1 |
+| Swagger UI (dev only) | http://localhost:8080/swagger-ui.html |
+| Health | http://localhost:8080/actuator/health |
+| pgAdmin | http://localhost:5050 (server "CivSetu (local)", password = `POSTGRES_PASSWORD`) |
+| Database (IntelliJ / psql) | `localhost:5433`, database `civsetu` |
+
+In IntelliJ IDEA, open the repository root and use the shared run configurations:
+**CivSetu API (dev)** and **Backend tests (mvnw verify)**. Ready-made requests live in `http/`.
+
+## Tests
+
+```powershell
+.\mvnw.cmd verify
+```
+
+Integration tests start a throwaway PostGIS container (Docker must be running).
+`ArchitectureTest` fails the build if the package rules below are broken.
+
+## Project structure
+
+Code is organised **by feature first, then by role**, following Spring Boot's recommended layout
+(main class in the root package, one package per feature).
+
+```
+src/main/java/com/civsetu/
+├── CivSetuApplication.java      entry point
+├── common/                      shared building blocks, no feature logic
+│   ├── error/                   ApiException, global RFC 9457 error handler
+│   ├── persistence/             BaseEntity (UUID id, created/updated timestamps)
+│   ├── security/                CurrentUser (caller id from the JWT)
+│   ├── validation/              shared validation patterns
+│   └── web/                     PageResponse
+├── config/                      app-wide Spring config: security, CORS, OpenAPI, clock
+├── auth/                        register, login, refresh tokens, JWT
+├── user/                        accounts, roles, admin user management
+└── department/                  departments (more features are added per phase)
+
+src/main/resources/
+├── application.yml              shared settings; application-dev.yml / application-prod.yml per profile
+└── db/migration/                Flyway migrations: V1__baseline.sql, V2__..., never edited once merged
+```
+
+Every feature uses the same sub-packages (only the ones it needs):
+
+| Sub-package | Contains | Example |
+|---|---|---|
+| `controller/` | REST endpoints; thin, no business logic | `AuthController` |
+| `dto/` | Request and response records with validation annotations | `RegisterRequest`, `UserResponse` |
+| `service/` | Business logic and transactions; the feature's public API | `UserService` |
+| `repository/` | Spring Data repositories | `UserRepository` |
+| `entity/` | JPA entities and their enums | `User`, `Role` |
+| `config/` | Feature settings (`@ConfigurationProperties`) and beans | `AuthProperties` |
+| `security/` | Feature-specific security filters | `AuthRateLimitFilter` |
+
+Tests mirror the same packages under `src/test/java`; shared test helpers live in `support/`.
+
+### Rules (enforced by `ArchitectureTest`)
+
+1. Controllers call services, never repositories.
+2. Repositories are used only by services.
+3. Controllers return DTOs, never entities.
+4. A feature uses another feature only through its `service` and `dto` packages (enums excepted).
+5. `common` never depends on a feature, and features have no dependency cycles.
+6. The database schema changes only through a new Flyway migration (`ddl-auto: validate`).
+
+### Adding a feature
+
+Create `com/civsetu/<feature>/` with the sub-packages above, add a migration
+`V<n>__<description>.sql`, write the test next to it, and expose only the service to other features.
+
+## Configuration
+
+Secrets and URLs come from environment variables; locally they are read from `backend/.env`
+(git-ignored) on the `dev` profile. See `.env.example` for every variable.
+
+| Profile | Used for |
+|---|---|
+| `dev` (default) | Local work: Docker Compose database, Swagger UI, debug logging |
+| `test` | Automated tests (`src/test/resources/application-test.yml`) |
+| `prod` | Deployment: database from `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`, no Swagger |
+
+## API conventions
+
+- Base path `/api/v1`; JSON in and out; lists are paginated (`page`, `size`, max 50).
+- Errors are `application/problem+json` with a stable `code` (e.g. `EMAIL_TAKEN`) and, for
+  validation errors, an `errors` list of `{field, message}`.
+- Authentication: `Authorization: Bearer <access token>` (15 minutes). The refresh token is an
+  httpOnly cookie used only by `/api/v1/auth/refresh` and `/logout`.
+- Roles: `CITIZEN` (self sign-up), `AUTHORITY` and `ADMIN` (created by an Admin).

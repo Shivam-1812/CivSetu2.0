@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.civsetu.common.error.ApiException;
+import com.civsetu.support.IntegrationTest;
 
 @Import(ApiFoundationTest.ProblemProbeController.class)
 class ApiFoundationTest extends IntegrationTest {

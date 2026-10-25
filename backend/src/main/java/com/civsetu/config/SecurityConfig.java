@@ -19,8 +19,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.civsetu.auth.AuthProperties;
-import com.civsetu.auth.AuthRateLimitFilter;
+import com.civsetu.auth.config.AuthProperties;
+import com.civsetu.auth.security.AuthRateLimitFilter;
 
 /**
  * Stateless API security: Bearer JWT access tokens, roles from the token's {@code role} claim,

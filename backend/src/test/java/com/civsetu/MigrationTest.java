@@ -13,6 +13,8 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.civsetu.support.IntegrationTest;
+
 @Transactional
 class MigrationTest extends IntegrationTest {
 

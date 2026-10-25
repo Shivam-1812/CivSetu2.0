@@ -2,7 +2,7 @@
   <configuration default="false" name="CivSetu API (dev)" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <option name="ACTIVE_PROFILES" value="dev" />
     <module name="backend" />
-    <option name="SPRING_BOOT_MAIN_CLASS" value="com.civsetu.BackendApplication" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.civsetu.CivSetuApplication" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/backend" />
     <method v="2">
       <option name="Make" enabled="true" />
