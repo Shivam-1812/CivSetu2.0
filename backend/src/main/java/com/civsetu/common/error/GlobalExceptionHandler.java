@@ -36,7 +36,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     ProblemDetail handleApi(ApiException ex) {
-        return problem(ex.getStatus(), ex.getCode(), ex.getMessage());
+        return ex.toProblemDetail();
     }
 
     // Raised by the security filter chain (via the entry point) and by method security

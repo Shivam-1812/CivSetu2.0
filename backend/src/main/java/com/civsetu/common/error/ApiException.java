@@ -1,6 +1,7 @@
 package com.civsetu.common.error;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 
 /**
  * Business error with an HTTP status and a stable machine-readable {@code code}
@@ -23,6 +24,12 @@ public class ApiException extends RuntimeException {
 
     public static ApiException conflict(String code, String message) {
         return new ApiException(HttpStatus.CONFLICT, code, message);
+    }
+
+    public ProblemDetail toProblemDetail() {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, getMessage());
+        problem.setProperty("code", code);
+        return problem;
     }
 
     public HttpStatus getStatus() {

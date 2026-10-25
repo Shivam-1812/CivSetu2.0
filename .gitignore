@@ -9,6 +9,7 @@
 .env
 *.env
 !.env.example
+http-client.private.env.json
 
 # Build output and local data
 target/

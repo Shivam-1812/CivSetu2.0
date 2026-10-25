@@ -1,4 +1,7 @@
 spring:
+  config:
+    # Local secrets file (git-ignored). Dev only, so tests and CI never read it.
+    import: optional:file:.env[.properties]
   docker:
     compose:
       # Starts backend/compose.yaml (PostGIS) and leaves it running between restarts
@@ -10,6 +13,12 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+
+civsetu:
+  auth:
+    refresh-cookie:
+      # Local development runs over plain http
+      secure: false
 
 logging:
   level:

@@ -4,9 +4,6 @@ spring:
   profiles:
     # IntelliJ / mvnw spring-boot:run start on dev; production sets SPRING_PROFILES_ACTIVE=prod
     default: dev
-  config:
-    # Local secrets file (git-ignored); absent in production, where real env vars are used
-    import: optional:file:.env[.properties]
   jpa:
     open-in-view: false
     hibernate:
@@ -51,3 +48,29 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+civsetu:
+  auth:
+    # HMAC key for access tokens, at least 32 characters. Required; no default.
+    jwt-secret: ${CIVSETU_JWT_SECRET:}
+    issuer: civsetu
+    access-token-ttl: 15m
+    refresh-token-ttl: 14d
+    refresh-cookie:
+      name: civsetu_refresh
+      path: /api/v1/auth
+      secure: true
+      # Strict when frontend and API share a site; None when they are on different sites (needs secure)
+      same-site: ${CIVSETU_REFRESH_COOKIE_SAMESITE:Strict}
+    rate-limit:
+      # Requests per minute per client IP
+      login-per-minute: 10
+      register-per-minute: 5
+      refresh-per-minute: 30
+  cors:
+    allowed-origins: ${CIVSETU_CORS_ORIGINS:http://localhost:5173}
+  bootstrap-admin:
+    # Created on startup only when no Admin exists yet
+    name: ${CIVSETU_BOOTSTRAP_ADMIN_NAME:CivSetu Admin}
+    email: ${CIVSETU_BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${CIVSETU_BOOTSTRAP_ADMIN_PASSWORD:}

@@ -1,0 +1,14 @@
+civsetu:
+  auth:
+    # Test-only key; never used outside the test suite
+    jwt-secret: test-only-secret-key-for-civsetu-tests-0123456789
+    refresh-cookie:
+      secure: false
+    rate-limit:
+      # High limits so the suite is not throttled; the limiter has its own unit test
+      login-per-minute: 1000
+      register-per-minute: 1000
+      refresh-per-minute: 1000
+  bootstrap-admin:
+    email: ""
+    password: ""

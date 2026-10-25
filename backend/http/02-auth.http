@@ -1,0 +1,62 @@
+### Register a Citizen (any "role" field is ignored) — stores the access token
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "name": "Asha Patil",
+  "email": "asha.{{$random.alphanumeric(6)}}@example.test",
+  "password": "citizen-pass-123",
+  "phone": "+919876543210"
+}
+
+> {% client.global.set("token", response.body.accessToken); %}
+
+### Log in as the bootstrap Admin (credentials from http-client.private.env.json)
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+> {% client.global.set("token", response.body.accessToken); %}
+
+### Who am I
+GET {{host}}/api/v1/auth/me
+Authorization: Bearer {{token}}
+
+### Edit my profile
+PATCH {{host}}/api/v1/users/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Asha P.",
+  "phone": "+919800000000"
+}
+
+### New access token from the refresh cookie (IntelliJ keeps cookies between requests)
+POST {{host}}/api/v1/auth/refresh
+
+> {% client.global.set("token", response.body.accessToken); %}
+
+### Admin: create an Authority (needs a department id; departments are seeded in Phase 3)
+POST {{host}}/api/v1/admin/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ward Officer",
+  "email": "officer.{{$random.alphanumeric(6)}}@example.test",
+  "password": "officer-pass-123",
+  "role": "AUTHORITY",
+  "departmentId": "00000000-0000-0000-0000-000000000000"
+}
+
+### Admin: list users (page size capped at 50)
+GET {{host}}/api/v1/admin/users?role=ADMIN&page=0&size=20
+Authorization: Bearer {{token}}
+
+### Log out (revokes the session and clears the cookie)
+POST {{host}}/api/v1/auth/logout
