@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.civsetu.common.domain.Priority;
 import com.civsetu.issue.entity.IssueStatus;
+import com.civsetu.sla.dto.SlaState;
 
 /**
  * One row in an issue list. Contains only public information.
@@ -22,5 +23,6 @@ public record IssueSummaryResponse(
         double latitude,
         double longitude,
         Instant createdAt,
-        Instant slaDueAt) {
+        Instant slaDueAt,
+        SlaState slaState) {
 }

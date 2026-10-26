@@ -146,6 +146,11 @@ public class UserService {
                 .toList();
     }
 
+    /** Every active Admin, e.g. to alert them about missed deadlines. */
+    public List<UUID> activeAdminIds() {
+        return users.findByRoleAndActiveTrue(Role.ADMIN).stream().map(User::getId).toList();
+    }
+
     public boolean hasAdmin() {
         return users.existsByRole(Role.ADMIN);
     }

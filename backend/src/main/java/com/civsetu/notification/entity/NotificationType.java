@@ -11,5 +11,7 @@ public enum NotificationType {
     DUPLICATE,
     REOPENED,
     PRIORITY_RAISED,
-    NEW_COMMENT
+    SLA_BREACHED,
+    NEW_COMMENT,
+    SURVEY_INVITATION
 }

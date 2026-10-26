@@ -1,0 +1,56 @@
+### SLA state is part of every issue (ON_TRACK, AT_RISK, BREACHED; MET or MISSED once resolved)
+GET {{host}}/api/v1/issues?size=10
+
+### Analytics, scoped to the signed-in user (Admin: city, Authority: department, Citizen: own reports)
+GET {{host}}/api/v1/analytics/summary
+Authorization: Bearer {{token}}
+
+### A custom period (at most 366 days)
+GET {{host}}/api/v1/analytics/summary?from=2026-10-01T00:00:00Z&to=2026-11-01T00:00:00Z
+Authorization: Bearer {{token}}
+
+###
+GET {{host}}/api/v1/analytics/trend?days=30
+Authorization: Bearer {{token}}
+
+###
+GET {{host}}/api/v1/analytics/hotspots?limit=10
+Authorization: Bearer {{token}}
+
+### Open issues past their deadline, most overdue first
+GET {{host}}/api/v1/analytics/overdue?page=0&size=20
+Authorization: Bearer {{token}}
+
+### Surveys (Authority or Admin): find areas with several open issues
+GET {{host}}/api/v1/surveys/clusters?radius=500&minIssues=3
+Authorization: Bearer {{token}}
+
+> {% client.global.set("lat", response.body[0].centerLatitude); client.global.set("lng", response.body[0].centerLongitude); %}
+
+### Create a survey for that area; everyone who reported an open issue there is invited
+POST {{host}}/api/v1/surveys
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Street lighting in your lane",
+  "centerLatitude": {{lat}},
+  "centerLongitude": {{lng}},
+  "radiusMeters": 500,
+  "closesAt": "2026-12-31T18:30:00Z",
+  "questions": [
+    { "text": "How safe does the lane feel at night?", "type": "RATING" },
+    { "text": "Should more lights be added?", "type": "YES_NO" },
+    { "text": "Anything else we should know?", "type": "TEXT" }
+  ]
+}
+
+> {% client.global.set("surveyId", response.body.id); %}
+
+### Results (creator or Admin)
+GET {{host}}/api/v1/surveys/{{surveyId}}/results
+Authorization: Bearer {{token}}
+
+### Citizens: surveys I am invited to
+GET {{host}}/api/v1/surveys/mine
+Authorization: Bearer {{token}}

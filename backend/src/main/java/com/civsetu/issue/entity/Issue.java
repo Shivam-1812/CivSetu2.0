@@ -79,6 +79,10 @@ public class Issue extends BaseEntity {
     @Column(name = "flagged_for_review", nullable = false)
     private boolean flaggedForReview;
 
+    // Set once by the SLA monitor when the breach alert is sent (cleared on reopen, which sets a new deadline)
+    @Column(name = "breach_notified_at")
+    private Instant breachNotifiedAt;
+
     // Community escalation raises the priority at most once per issue
     @Column(name = "priority_raised_by_community", nullable = false)
     private boolean priorityRaisedByCommunity;
@@ -166,6 +170,7 @@ public class Issue extends BaseEntity {
         this.resolvedAt = null;
         this.closedAt = null;
         this.slaDueAt = newDeadline;
+        this.breachNotifiedAt = null;
         this.assignedAuthorityId = authorityId;
         this.reopenCount++;
     }
@@ -236,6 +241,15 @@ public class Issue extends BaseEntity {
 
     public int getReopenCount() {
         return reopenCount;
+    }
+
+    public Instant getBreachNotifiedAt() {
+        return breachNotifiedAt;
+    }
+
+    /** REPORTED, ASSIGNED or IN_PROGRESS: still waiting to be fixed. */
+    public boolean isOpen() {
+        return status == IssueStatus.REPORTED || status == IssueStatus.ASSIGNED || status == IssueStatus.IN_PROGRESS;
     }
 
     public boolean isPriorityRaisedByCommunity() {

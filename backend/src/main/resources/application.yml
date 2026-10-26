@@ -55,6 +55,16 @@ springdoc:
     enabled: false
 
 civsetu:
+  scheduling:
+    # Background jobs: workflow safety net, SLA monitor, expired-token cleanup
+    enabled: true
+  sla:
+    # How often to look for issues past their deadline (each alert is sent once)
+    check-interval: 15m
+    batch-size: 100
+  analytics:
+    # Days are counted in this time zone for daily trends
+    time-zone: Asia/Kolkata
   auth:
     # HMAC key for access tokens, at least 32 characters. Required; no default.
     jwt-secret: ${CIVSETU_JWT_SECRET:}
@@ -109,7 +119,6 @@ civsetu:
   workflow:
     async-triage: true
     # Safety net: retries stuck triage and fills missing assignments
-    sweep-enabled: true
     sweep-interval: 60s
     retry-triage-after: 3m
     sweep-batch-size: 10

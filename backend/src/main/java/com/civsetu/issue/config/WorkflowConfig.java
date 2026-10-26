@@ -1,11 +1,9 @@
 package com.civsetu.issue.config;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
@@ -30,12 +28,5 @@ class WorkflowConfig {
         executor.setAwaitTerminationSeconds(30);
         // Spring initialises and shuts down the pool (it is an InitializingBean / DisposableBean)
         return executor;
-    }
-
-    /** Turns on @Scheduled jobs (the workflow safety net) unless disabled. */
-    @Configuration(proxyBeanMethods = false)
-    @EnableScheduling
-    @ConditionalOnProperty(name = "civsetu.workflow.sweep-enabled", havingValue = "true", matchIfMissing = true)
-    static class SchedulingOn {
     }
 }

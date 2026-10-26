@@ -20,6 +20,16 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
+    /** Unlinks tokens that point at a token about to be deleted (the replaced-by chain). */
+    @Modifying
+    @Query(value = "UPDATE refresh_tokens SET replaced_by_id = NULL WHERE replaced_by_id IN "
+            + "(SELECT id FROM refresh_tokens WHERE expires_at < :cutoff)", nativeQuery = true)
+    int unlinkExpired(@Param("cutoff") Instant cutoff);
+
+    @Modifying
+    @Query("delete from RefreshToken t where t.expiresAt < :cutoff")
+    int deleteExpired(@Param("cutoff") Instant cutoff);
+
     @Modifying
     @Query("update RefreshToken t set t.revokedAt = :now where t.familyId = :familyId and t.revokedAt is null")
     int revokeFamily(@Param("familyId") UUID familyId, @Param("now") Instant now);

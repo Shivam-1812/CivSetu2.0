@@ -22,7 +22,7 @@ public class IssueUpdate extends BaseEntity {
 
     public enum Action {
         REPORTED, ASSIGNED, PLANNED, RESOLVED, REJECTED, RETURNED, REOPENED, REASSIGNED, PRIORITY_RAISED,
-        MARKED_DUPLICATE
+        MARKED_DUPLICATE, SLA_BREACHED
     }
 
     @Column(name = "issue_id", nullable = false, updatable = false)

@@ -53,6 +53,7 @@ src/main/java/com/civsetu/
 │   ├── validation/              shared validation patterns
 │   └── web/                     PageResponse
 ├── config/                      app-wide Spring config: security, CORS, OpenAPI, clock
+├── analytics/                   read-only, role-scoped reporting (SQL aggregates)
 ├── audit/                       read-only log of Admin actions and system decisions
 ├── auth/                        register, login, refresh tokens, JWT
 ├── user/                        accounts, roles, admin user management
@@ -61,7 +62,8 @@ src/main/java/com/civsetu/
 ├── issue/                       reporting, search, map, workflow (plan/resolve/reject/return/reopen), history
 ├── media/                       photo/voice uploads, EXIF stripping, storage (local disk or S3/R2)
 ├── notification/                in-app notifications and the live Server-Sent Events stream
-├── sla/                         resolution deadlines per priority
+├── sla/                         fixed deadlines per priority, SLA states (On Track/At Risk/Breached/Met/Missed)
+├── survey/                      area surveys for the reporters of clustered issues
 └── triage/                      automatic routing: AI advisor (Gemini) with rule-engine fallback
 
 src/main/resources/
@@ -110,6 +112,7 @@ Secrets and URLs come from environment variables; locally they are read from `ba
 | `dev` (default) | Local work: Docker Compose database, Swagger UI, debug logging |
 | `demo` | Add to dev (`dev,demo`) to fill an empty database with 40 sample issues around Pune |
 | `test` | Automated tests (`src/test/resources/application-test.yml`) |
+| (any) | `civsetu.scheduling.enabled=false` turns off background jobs (tests do this) |
 | `prod` | Deployment: database from `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`, no Swagger |
 
 ## API conventions
@@ -135,6 +138,12 @@ Secrets and URLs come from environment variables; locally they are read from `ba
   system raises an open issue's priority one level, once, and records it in the history.
 - Duplicates: `GET /api/v1/issues/similar?latitude=&longitude=&category=&title=` before reporting, and
   `GET /api/v1/issues/{id}/similar`; the assigned Authority can close an issue as a duplicate.
+- SLA: every issue shows `slaState`. Every 15 minutes the system alerts each newly breached issue
+  exactly once (reporter, Authority, Admins), recorded in the history. Targets are fixed, not editable.
+- Surveys: Authorities (own department) and Admins find clusters (`GET /api/v1/surveys/clusters`) and
+  survey everyone who reported an open issue there; each person answers once.
+- Analytics (`/api/v1/analytics/summary|trend|hotspots|overdue`) are scoped to the caller: Admin the city,
+  Authority the department, Citizen their own reports.
 - Live notifications: `POST /api/v1/notifications/stream-ticket`, then `new EventSource(streamUrl)`.
   Events are named `notification`; the browser's automatic `Last-Event-ID` replays missed ones.
 - Uploads: `POST /api/v1/issues` as `multipart/form-data` with parts `data` (JSON, Content-Type

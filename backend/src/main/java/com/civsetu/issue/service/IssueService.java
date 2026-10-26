@@ -28,6 +28,7 @@ import com.civsetu.department.dto.CategoryResponse;
 import com.civsetu.department.service.CategoryService;
 import com.civsetu.issue.dto.BoundingBox;
 import com.civsetu.issue.dto.CreateIssueRequest;
+import com.civsetu.issue.dto.IssueCluster;
 import com.civsetu.issue.dto.IssueDetailResponse;
 import com.civsetu.issue.dto.IssueSearchParams;
 import com.civsetu.issue.dto.IssueSummaryResponse;
@@ -55,7 +56,7 @@ public class IssueService {
 
     /** Most markers returned for one map viewport. */
     static final int MAP_LIMIT = 1000;
-    // Matches no issue; used when there is nothing to exclude from the similar-issue search
+    // Matches no row; stands in for "none" where a query needs a non-null id
     private static final UUID NO_ISSUE = new UUID(0, 0);
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
 
@@ -112,6 +113,32 @@ public class IssueService {
         // Shown to the reporter right away: someone may already have reported the same problem
         return mapper.detail(issue, reporter, similar(issue.getLatitude(), issue.getLongitude(), issue.getCategoryId(),
                 issue.getTitle(), issue.getId()));
+    }
+
+    /**
+     * Areas with several open issues, for surveys.
+     *
+     * @param departmentId only this department's issues, or null for all
+     */
+    public List<IssueCluster> clusters(int radiusMeters, int minIssues, UUID departmentId) {
+        return issues.findClusters(radiusMeters, minIssues, departmentId == null, orNone(departmentId)).stream()
+                .map(row -> new IssueCluster(((Number) row[0]).doubleValue(), ((Number) row[1]).doubleValue(),
+                        ((Number) row[2]).intValue(), ((Number) row[3]).intValue()))
+                .toList();
+    }
+
+    /**
+     * People who reported an open issue near a point: the audience of an area survey.
+     *
+     * @param departmentId only this department's issues, or null for all
+     */
+    public List<UUID> reportersNear(double latitude, double longitude, int radiusMeters, UUID departmentId) {
+        return issues.findReportersNear(latitude, longitude, radiusMeters, departmentId == null,
+                orNone(departmentId));
+    }
+
+    private static UUID orNone(UUID id) {
+        return id == null ? NO_ISSUE : id;
     }
 
     /** Open issues that may describe the same problem as this one. */

@@ -11,6 +11,7 @@ import com.civsetu.department.service.DepartmentService;
 import com.civsetu.engagement.dto.CommentAddedEvent;
 import com.civsetu.issue.dto.IssueActivityEvent;
 import com.civsetu.notification.entity.NotificationType;
+import com.civsetu.user.service.UserService;
 
 /**
  * Turns issue activity into notifications for the people involved: the reporter hears about every
@@ -22,10 +23,12 @@ class IssueNotifier {
 
     private final NotificationService notifications;
     private final DepartmentService departments;
+    private final UserService users;
 
-    IssueNotifier(NotificationService notifications, DepartmentService departments) {
+    IssueNotifier(NotificationService notifications, DepartmentService departments, UserService users) {
         this.notifications = notifications;
         this.departments = departments;
+        this.users = users;
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
@@ -58,6 +61,16 @@ class IssueNotifier {
                     title + " is being handled under another report. " + nullToEmpty(event.remarks()));
             case REOPENED -> toAuthority(event, NotificationType.REOPENED, "Issue reopened",
                     "The reporter reopened " + title + ": " + nullToEmpty(event.remarks()));
+            case SLA_BREACHED -> {
+                toReporter(event, NotificationType.SLA_BREACHED, "Deadline missed",
+                        "The deadline for " + title + " has passed. " + department + " has been alerted.");
+                toAuthority(event, NotificationType.SLA_BREACHED, "Deadline missed",
+                        title + " is past its deadline. Please resolve it as soon as possible.");
+                for (UUID admin : users.activeAdminIds()) {
+                    notifications.notify(admin, NotificationType.SLA_BREACHED, "Deadline missed",
+                            title + " (" + department + ") is past its deadline.", event.issueId());
+                }
+            }
             case PRIORITY_RAISED -> {
                 toReporter(event, NotificationType.PRIORITY_RAISED, "Priority raised", nullToEmpty(event.remarks()));
                 toAuthority(event, NotificationType.PRIORITY_RAISED, "Priority raised",

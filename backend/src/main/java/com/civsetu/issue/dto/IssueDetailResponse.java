@@ -9,6 +9,7 @@ import com.civsetu.engagement.dto.VoteTally;
 import com.civsetu.issue.entity.IssueStatus;
 import com.civsetu.issue.entity.PrioritySource;
 import com.civsetu.media.dto.MediaResponse;
+import com.civsetu.sla.dto.SlaState;
 
 /**
  * Full view of one issue. Fields depend on who asks:
@@ -43,6 +44,7 @@ public record IssueDetailResponse(
         Instant createdAt,
         Instant updatedAt,
         Instant slaDueAt,
+        SlaState slaState,
         Instant resolvedAt,
         Instant closedAt,
         int reopenCount,

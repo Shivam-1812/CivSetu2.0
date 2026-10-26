@@ -18,9 +18,11 @@ civsetu:
       # Tests never call Google: no key means the rule engine decides
       api-key: ""
   workflow:
-    # Triage runs inline right after commit, and no scheduler runs, so tests are deterministic
+    # Triage runs inline right after commit, so tests are deterministic
     async-triage: false
-    sweep-enabled: false
+  scheduling:
+    # No background jobs in tests; tests call the jobs directly
+    enabled: false
   engagement:
     # Low threshold so escalation can be tested with a few voters
     escalation-votes: 3

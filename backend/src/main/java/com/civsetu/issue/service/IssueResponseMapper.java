@@ -1,5 +1,7 @@
 package com.civsetu.issue.service;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -19,6 +21,9 @@ import com.civsetu.issue.dto.SimilarIssueResponse;
 import com.civsetu.issue.entity.Issue;
 import com.civsetu.media.dto.MediaResponse;
 import com.civsetu.media.service.MediaService;
+import com.civsetu.sla.dto.SlaRules;
+import com.civsetu.sla.dto.SlaState;
+import com.civsetu.sla.service.SlaService;
 import com.civsetu.triage.dto.TriageDecisionResponse;
 import com.civsetu.triage.service.TriageService;
 import com.civsetu.user.service.UserService;
@@ -36,23 +41,32 @@ class IssueResponseMapper {
     private final MediaService media;
     private final TriageService triage;
     private final EngagementService engagement;
+    private final SlaService sla;
+    private final Clock clock;
 
     IssueResponseMapper(CategoryService categories, DepartmentService departments, UserService users,
-            MediaService media, TriageService triage, EngagementService engagement) {
+            MediaService media, TriageService triage, EngagementService engagement, SlaService sla, Clock clock) {
         this.categories = categories;
         this.departments = departments;
         this.users = users;
         this.media = media;
         this.triage = triage;
         this.engagement = engagement;
+        this.sla = sla;
+        this.clock = clock;
     }
 
-    /** Category and department names, loaded once per request (both tables are small). */
-    record Labels(Map<UUID, CategoryResponse> categories, Map<UUID, DepartmentResponse> departments) {
+    /** Names and SLA targets, loaded once per request (the tables are small), and one "now" for all rows. */
+    record Labels(Map<UUID, CategoryResponse> categories, Map<UUID, DepartmentResponse> departments, SlaRules sla,
+            Instant now) {
+
+        SlaState slaState(Issue issue) {
+            return sla.state(issue.getPriority(), issue.getSlaDueAt(), issue.getResolvedAt(), issue.isOpen(), now);
+        }
     }
 
     Labels labels() {
-        return new Labels(categories.lookup(), departments.lookup());
+        return new Labels(categories.lookup(), departments.lookup(), sla.rules(), clock.instant());
     }
 
     IssueSummaryResponse summary(Issue issue, Labels labels) {
@@ -60,7 +74,8 @@ class IssueResponseMapper {
         DepartmentResponse department = labels.departments().get(issue.getDepartmentId());
         return new IssueSummaryResponse(issue.getId(), issue.getTitle(), category.code(), category.label(),
                 department.id(), department.name(), issue.getStatus(), issue.getPriority(), issue.getAddress(),
-                issue.getLatitude(), issue.getLongitude(), issue.getCreatedAt(), issue.getSlaDueAt());
+                issue.getLatitude(), issue.getLongitude(), issue.getCreatedAt(), issue.getSlaDueAt(),
+                labels.slaState(issue));
     }
 
     MapResponse.Point mapPoint(Issue issue, Labels labels) {
@@ -95,7 +110,8 @@ class IssueResponseMapper {
                 category.label(), department.id(), department.name(), issue.getStatus(), issue.getPriority(),
                 issue.getPrioritySource(), priorityReason, issue.getAddress(), issue.getLatitude(),
                 issue.getLongitude(), issue.getCreatedAt(), issue.getUpdatedAt(), issue.getSlaDueAt(),
-                issue.getResolvedAt(), issue.getClosedAt(), issue.getReopenCount(), issue.getDuplicateOfId(),
+                labels.slaState(issue), issue.getResolvedAt(), issue.getClosedAt(), issue.getReopenCount(),
+                issue.getDuplicateOfId(),
                 issue.getVersion(), isReporter, reporter,
                 isStaff ? issue.getAssignedAuthorityId() : null,
                 isStaff ? issue.isFlaggedForReview() : null,
