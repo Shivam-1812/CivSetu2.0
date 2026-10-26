@@ -8,7 +8,7 @@ GET {{host}}/actuator/health/liveness
 GET {{host}}/actuator/health/readiness
 
 ### Protected route without a token — expect 401 problem JSON with code UNAUTHORIZED
-GET {{host}}/api/v1/issues
+GET {{host}}/api/v1/issues/mine
 
 ### OpenAPI document (dev profile only); Swagger UI: {{host}}/swagger-ui.html
 GET {{host}}/v3/api-docs

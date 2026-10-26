@@ -18,7 +18,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 
-import com.civsetu.auth.service.TokenService;
+import com.civsetu.common.security.TokenClaims;
 
 /**
  * Access tokens are HS256 JWTs signed and verified with the same server-side secret.
@@ -45,7 +45,7 @@ class JwtConfig {
     @Bean
     JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter roles = new JwtGrantedAuthoritiesConverter();
-        roles.setAuthoritiesClaimName(TokenService.ROLE_CLAIM);
+        roles.setAuthoritiesClaimName(TokenClaims.ROLE);
         roles.setAuthorityPrefix("ROLE_");
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(roles);

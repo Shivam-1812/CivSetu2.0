@@ -56,6 +56,10 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login",
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
+                        // Public transparency: anyone may browse issues and reference data
+                        .requestMatchers(HttpMethod.GET, "/api/v1/issues/mine").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/issues", "/api/v1/issues/map", "/api/v1/issues/*",
+                                "/api/v1/categories", "/api/v1/departments").permitAll()
                         // Admin routes are also guarded per controller with @PreAuthorize
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated());

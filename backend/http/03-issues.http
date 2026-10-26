@@ -1,0 +1,50 @@
+### Reference data for the report form (public)
+GET {{host}}/api/v1/categories
+
+###
+GET {{host}}/api/v1/departments
+
+### Register a Citizen and keep the token
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "name": "Asha Patil",
+  "email": "asha.{{$random.alphanumeric(6)}}@example.test",
+  "password": "citizen-pass-123"
+}
+
+> {% client.global.set("token", response.body.accessToken); %}
+
+### Report an issue (Citizen only); department, priority and deadline are set by the server
+POST {{host}}/api/v1/issues
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Deep pothole on FC Road",
+  "description": "Large pothole near the bus stop; two-wheelers are slipping.",
+  "category": "POTHOLE",
+  "latitude": 18.5236,
+  "longitude": 73.8478,
+  "address": "FC Road, Shivaji Nagar, Pune"
+}
+
+> {% client.global.set("issueId", response.body.id); %}
+
+### Issue detail (public; the reporter also sees their contact block)
+GET {{host}}/api/v1/issues/{{issueId}}
+Authorization: Bearer {{token}}
+
+### My reports
+GET {{host}}/api/v1/issues/mine
+Authorization: Bearer {{token}}
+
+### Search: filters can be combined; all optional
+GET {{host}}/api/v1/issues?status=REPORTED&priority=HIGH&priority=CRITICAL&q=water&page=0&size=20
+
+### Search by category, department and date range
+GET {{host}}/api/v1/issues?category=GARBAGE&from=2026-10-01T00:00:00Z&to=2026-12-31T00:00:00Z
+
+### Map markers for a viewport (minLng,minLat,maxLng,maxLat) — Pune
+GET {{host}}/api/v1/issues/map?bbox=73.70,18.40,74.00,18.65

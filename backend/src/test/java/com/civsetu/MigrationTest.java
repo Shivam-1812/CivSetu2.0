@@ -37,6 +37,26 @@ class MigrationTest extends IntegrationTest {
     }
 
     @Test
+    void routingAndSlaSeedDataIsPresent() {
+        Integer departments = jdbc.queryForObject("SELECT count(*) FROM departments WHERE code IN "
+                + "('ROADS','SANITATION','WATER','DRAINAGE','ELECTRICAL','PARKS','HEALTH','TRAFFIC','GENERAL')",
+                Integer.class);
+        assertThat(departments).isEqualTo(9);
+
+        // Every seeded category routes to a seeded department
+        Integer routed = jdbc.queryForObject("SELECT count(*) FROM categories c JOIN departments d "
+                + "ON d.id = c.default_department_id WHERE c.code IN ('POTHOLE','FOOTPATH','GARBAGE',"
+                + "'ILLEGAL_DUMPING','WATER_LEAK','NO_WATER','DRAIN_BLOCKAGE','WATERLOGGING','STREETLIGHT',"
+                + "'EXPOSED_WIRE','TREE_FALL','PARK_MAINTENANCE','STRAY_ANIMALS','MOSQUITO','TRAFFIC_SIGNAL','OTHER')",
+                Integer.class);
+        assertThat(routed).isEqualTo(16);
+
+        List<String> sla = jdbc.queryForList(
+                "SELECT priority || '=' || target_hours FROM sla_policies ORDER BY target_hours", String.class);
+        assertThat(sla).containsExactly("CRITICAL=24", "HIGH=48", "MEDIUM=96", "LOW=168");
+    }
+
+    @Test
     void emailIsUniqueIgnoringCase() {
         jdbc.update("INSERT INTO users (name, email, role) VALUES ('Asha', 'Asha@Example.test', 'CITIZEN')");
 

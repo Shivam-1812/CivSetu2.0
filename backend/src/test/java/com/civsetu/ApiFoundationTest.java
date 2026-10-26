@@ -48,7 +48,7 @@ class ApiFoundationTest extends IntegrationTest {
 
     @Test
     void protectedRouteWithoutTokenReturnsProblem401() throws Exception {
-        mvc.perform(get("/api/v1/issues"))
+        mvc.perform(get("/api/v1/issues/mine"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));

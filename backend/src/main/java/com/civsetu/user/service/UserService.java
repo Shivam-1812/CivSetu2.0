@@ -1,6 +1,7 @@
 package com.civsetu.user.service;
 
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -98,6 +99,15 @@ public class UserService {
                 .map(UserResponse::from)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "ACCOUNT_UNAVAILABLE",
                         "This account is no longer available."));
+    }
+
+    /** Any account, active or not (e.g. to show who reported an issue). */
+    public Optional<UserResponse> findById(UUID id) {
+        return users.findById(id).map(UserResponse::from);
+    }
+
+    public Optional<UserResponse> findByEmail(String email) {
+        return users.findByEmail(normalizeEmail(email)).map(UserResponse::from);
     }
 
     @Transactional

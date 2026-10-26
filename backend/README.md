@@ -47,13 +47,17 @@ src/main/java/com/civsetu/
 ├── common/                      shared building blocks, no feature logic
 │   ├── error/                   ApiException, global RFC 9457 error handler
 │   ├── persistence/             BaseEntity (UUID id, created/updated timestamps)
-│   ├── security/                CurrentUser (caller id from the JWT)
+│   ├── domain/                  shared vocabulary (Priority)
+│   ├── geo/                     GeoPoints (WGS 84 points for PostGIS)
+│   ├── security/                Caller, CurrentUser, TokenClaims (who is calling)
 │   ├── validation/              shared validation patterns
 │   └── web/                     PageResponse
 ├── config/                      app-wide Spring config: security, CORS, OpenAPI, clock
 ├── auth/                        register, login, refresh tokens, JWT
 ├── user/                        accounts, roles, admin user management
-└── department/                  departments (more features are added per phase)
+├── department/                  departments and categories (category → department routing)
+├── issue/                       reporting, search, map, visibility rules, demo data
+└── sla/                         resolution deadlines per priority
 
 src/main/resources/
 ├── application.yml              shared settings; application-dev.yml / application-prod.yml per profile
@@ -96,6 +100,7 @@ Secrets and URLs come from environment variables; locally they are read from `ba
 | Profile | Used for |
 |---|---|
 | `dev` (default) | Local work: Docker Compose database, Swagger UI, debug logging |
+| `demo` | Add to dev (`dev,demo`) to fill an empty database with 40 sample issues around Pune |
 | `test` | Automated tests (`src/test/resources/application-test.yml`) |
 | `prod` | Deployment: database from `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`, no Swagger |
 
@@ -107,3 +112,6 @@ Secrets and URLs come from environment variables; locally they are read from `ba
 - Authentication: `Authorization: Bearer <access token>` (15 minutes). The refresh token is an
   httpOnly cookie used only by `/api/v1/auth/refresh` and `/logout`.
 - Roles: `CITIZEN` (self sign-up), `AUTHORITY` and `ADMIN` (created by an Admin).
+- Public without a token: issue list, map and detail, categories, departments. Reporter contact
+  details are shown only to the reporter, Admins, and Authorities of the issue's department.
+- Locations are WGS 84 `latitude`/`longitude`; map viewports are `bbox=minLng,minLat,maxLng,maxLat`.

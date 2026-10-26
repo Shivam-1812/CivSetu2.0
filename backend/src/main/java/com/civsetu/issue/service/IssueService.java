@@ -1,0 +1,134 @@
+package com.civsetu.issue.service;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.civsetu.common.domain.Priority;
+import com.civsetu.common.error.ApiException;
+import com.civsetu.common.geo.GeoPoints;
+import com.civsetu.common.security.Caller;
+import com.civsetu.common.web.PageResponse;
+import com.civsetu.department.dto.CategoryResponse;
+import com.civsetu.department.service.CategoryService;
+import com.civsetu.issue.dto.BoundingBox;
+import com.civsetu.issue.dto.CreateIssueRequest;
+import com.civsetu.issue.dto.IssueDetailResponse;
+import com.civsetu.issue.dto.IssueSearchParams;
+import com.civsetu.issue.dto.IssueSummaryResponse;
+import com.civsetu.issue.dto.MapResponse;
+import com.civsetu.issue.entity.Issue;
+import com.civsetu.issue.entity.PrioritySource;
+import com.civsetu.issue.repository.IssueFilter;
+import com.civsetu.issue.repository.IssueRepository;
+import com.civsetu.issue.repository.IssueSpecifications;
+import com.civsetu.sla.service.SlaService;
+
+/**
+ * Reporting and finding issues. Status changes (assign, resolve, ...) arrive in Phase 5.
+ */
+@Service
+@Transactional(readOnly = true)
+public class IssueService {
+
+    /** Most markers returned for one map viewport. */
+    static final int MAP_LIMIT = 1000;
+    private static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+
+    private final IssueRepository issues;
+    private final CategoryService categories;
+    private final SlaService sla;
+    private final IssueResponseMapper mapper;
+    private final Clock clock;
+
+    IssueService(IssueRepository issues, CategoryService categories, SlaService sla, IssueResponseMapper mapper,
+            Clock clock) {
+        this.issues = issues;
+        this.categories = categories;
+        this.sla = sla;
+        this.mapper = mapper;
+        this.clock = clock;
+    }
+
+    /**
+     * A Citizen's new report. Department and priority come from the category's routing rule,
+     * the deadline from the SLA policy for that priority.
+     */
+    @Transactional
+    public IssueDetailResponse report(Caller reporter, CreateIssueRequest request) {
+        CategoryResponse route = categories.routeNewIssue(request.category());
+        Priority priority = route.defaultPriority();
+        Issue issue = issues.save(new Issue(reporter.id(), request.title().trim(), request.description().trim(),
+                route.id(), route.departmentId(), priority, PrioritySource.RULE,
+                GeoPoints.of(request.latitude(), request.longitude()), request.address().trim(),
+                sla.dueAt(priority, clock.instant())));
+        return mapper.detail(issue, reporter);
+    }
+
+    public PageResponse<IssueSummaryResponse> search(IssueSearchParams params, Pageable pageable) {
+        return page(toFilter(params), pageable);
+    }
+
+    /** The caller's own reports, newest first. */
+    public PageResponse<IssueSummaryResponse> reportedBy(Caller caller, Pageable pageable) {
+        IssueFilter mine = new IssueFilter(null, null, null, null, null, null, null, caller.id(),
+                null, null, null, null);
+        return page(mine, pageable);
+    }
+
+    /** Markers for a map viewport; the bounding box is required. */
+    public MapResponse map(IssueSearchParams params) {
+        if (params.bbox() == null || params.bbox().isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "BBOX_REQUIRED",
+                    "The map needs a bbox=minLng,minLat,maxLng,maxLat parameter.");
+        }
+        List<Issue> found = issues.findBy(IssueSpecifications.matching(toFilter(params)),
+                query -> query.sortBy(NEWEST_FIRST).limit(MAP_LIMIT + 1).all());
+        IssueResponseMapper.Labels labels = mapper.labels();
+        List<MapResponse.Point> points = found.stream()
+                .limit(MAP_LIMIT)
+                .map(issue -> mapper.mapPoint(issue, labels))
+                .toList();
+        return new MapResponse(points, found.size() > MAP_LIMIT);
+    }
+
+    public IssueDetailResponse get(UUID id, Caller caller) {
+        Issue issue = issues.findById(id).orElseThrow(() -> ApiException.notFound("Issue"));
+        return mapper.detail(issue, caller);
+    }
+
+    private PageResponse<IssueSummaryResponse> page(IssueFilter filter, Pageable pageable) {
+        // Fixed order: client-supplied sort properties are ignored
+        Pageable newestFirst = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), NEWEST_FIRST);
+        Page<Issue> result = issues.findAll(IssueSpecifications.matching(filter), newestFirst);
+        IssueResponseMapper.Labels labels = mapper.labels();
+        return PageResponse.of(result, issue -> mapper.summary(issue, labels));
+    }
+
+    private IssueFilter toFilter(IssueSearchParams params) {
+        UUID categoryId = null;
+        if (params.category() != null && !params.category().isBlank()) {
+            categoryId = categories.findByCode(params.category().trim())
+                    .map(CategoryResponse::id)
+                    .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "UNKNOWN_CATEGORY",
+                            "Category '" + params.category() + "' does not exist."));
+        }
+        if (params.from() != null && params.to() != null && !params.from().isBefore(params.to())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_DATE_RANGE", "'from' must be before 'to'.");
+        }
+        BoundingBox box = params.bbox() == null || params.bbox().isBlank() ? null : BoundingBox.parse(params.bbox());
+        return new IssueFilter(params.status(), categoryId, params.department(), params.priority(), params.from(),
+                params.to(), params.q(), null,
+                box == null ? null : box.minLongitude(), box == null ? null : box.minLatitude(),
+                box == null ? null : box.maxLongitude(), box == null ? null : box.maxLatitude());
+    }
+}

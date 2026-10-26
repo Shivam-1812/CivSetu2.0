@@ -6,11 +6,16 @@ import jakarta.persistence.Table;
 
 import com.civsetu.common.persistence.BaseEntity;
 
+/**
+ * A municipal department that handles issues. Deactivated rather than deleted, because issues
+ * and users keep referring to it.
+ */
 @Entity
 @Table(name = "departments")
 public class Department extends BaseEntity {
 
-    @Column(nullable = false, length = 50)
+    // Stable identifier such as ROADS; never changes once created
+    @Column(nullable = false, length = 50, updatable = false)
     private String code;
 
     @Column(nullable = false, length = 150)
@@ -25,6 +30,12 @@ public class Department extends BaseEntity {
     protected Department() {
     }
 
+    public Department(String code, String name, String area) {
+        this.code = code;
+        this.name = name;
+        this.area = area;
+    }
+
     public String getCode() {
         return code;
     }
@@ -33,11 +44,23 @@ public class Department extends BaseEntity {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getArea() {
         return area;
     }
 
+    public void setArea(String area) {
+        this.area = area;
+    }
+
     public boolean isActive() {
         return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }

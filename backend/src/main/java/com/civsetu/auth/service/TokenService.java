@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 
 import com.civsetu.auth.config.AuthProperties;
+import com.civsetu.common.security.TokenClaims;
 import com.civsetu.user.dto.UserResponse;
 
 /**
@@ -19,9 +20,6 @@ import com.civsetu.user.dto.UserResponse;
  */
 @Service
 public class TokenService {
-
-    public static final String ROLE_CLAIM = "role";
-    public static final String DEPARTMENT_CLAIM = "dept";
 
     public record AccessToken(String value, Instant expiresAt, long expiresInSeconds) {
     }
@@ -45,9 +43,9 @@ public class TokenService {
                 .id(UUID.randomUUID().toString())
                 .issuedAt(now)
                 .expiresAt(expiresAt)
-                .claim(ROLE_CLAIM, user.role().name());
+                .claim(TokenClaims.ROLE, user.role().name());
         if (user.departmentId() != null) {
-            claims.claim(DEPARTMENT_CLAIM, user.departmentId().toString());
+            claims.claim(TokenClaims.DEPARTMENT, user.departmentId().toString());
         }
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         String value = encoder.encode(JwtEncoderParameters.from(header, claims.build())).getTokenValue();

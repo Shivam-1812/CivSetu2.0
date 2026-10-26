@@ -3,13 +3,16 @@ package com.civsetu.support;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import jakarta.servlet.http.Cookie;
 
 import com.jayway.jsonpath.JsonPath;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -46,8 +49,62 @@ public abstract class ApiTest extends IntegrationTest {
         return "Bearer " + accessToken;
     }
 
+    /** Locale-independent formatting, so decimals are always written with a dot. */
     protected static String json(String template, Object... args) {
-        return String.format(template, args);
+        return String.format(Locale.ROOT, template, args);
+    }
+
+    /**
+     * A small random area somewhere on the globe. Issues placed here are invisible to other
+     * tests' bounding-box queries, so tests can count results without interfering.
+     */
+    protected record Region(double latitude, double longitude) {
+
+        /** The i-th point inside this region (about 100 m apart). */
+        public double lat(int i) {
+            return latitude + i * 0.001;
+        }
+
+        public double lng(int i) {
+            return longitude + i * 0.001;
+        }
+
+        /** minLng,minLat,maxLng,maxLat covering every point of this region. */
+        public String bbox() {
+            return String.format(Locale.ROOT, "%.6f,%.6f,%.6f,%.6f",
+                    longitude - 0.01, latitude - 0.01, longitude + 0.05, latitude + 0.05);
+        }
+    }
+
+    protected static Region uniqueRegion() {
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        return new Region(-60 + random.nextDouble() * 120, -170 + random.nextDouble() * 340);
+    }
+
+    /** Reports an issue as the given citizen and returns its id. */
+    protected String reportIssue(Session citizen, String title, String category, double latitude, double longitude)
+            throws Exception {
+        MvcResult result = mvc.perform(post("/api/v1/issues")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(citizen.accessToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json("{\"title\":\"%s\",\"description\":\"Details about %s\",\"category\":\"%s\","
+                                + "\"latitude\":%.6f,\"longitude\":%.6f,\"address\":\"Test Street\"}",
+                                title, title, category, latitude, longitude)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+    }
+
+    protected UUID departmentIdByCode(String code) {
+        return jdbc.queryForObject("SELECT id FROM departments WHERE code = ?", UUID.class, code);
+    }
+
+    /** A new active category routed to the given department; returns its code. */
+    protected String createCategory(UUID departmentId, String priority) {
+        String code = "TEST_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
+        jdbc.update("INSERT INTO categories (code, label, default_department_id, default_priority) VALUES (?, ?, ?, ?)",
+                code, "Test category " + code, departmentId, priority);
+        return code;
     }
 
     protected Session registerCitizen(String email) throws Exception {
@@ -84,7 +141,7 @@ public abstract class ApiTest extends IntegrationTest {
     protected UUID createDepartment() {
         UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO departments (id, code, name) VALUES (?, ?, ?)",
-                id, "TEST-" + id.toString().substring(0, 8), "Test Department");
+                id, "TEST_" + id.toString().substring(0, 8).toUpperCase(Locale.ROOT), "Test Department");
         return id;
     }
 
