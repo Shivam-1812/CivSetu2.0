@@ -23,6 +23,11 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  servlet:
+    multipart:
+      # Hard limits in the servlet container; the per-kind rules live in civsetu.media
+      max-file-size: 10MB
+      max-request-size: 70MB
 
 server:
   port: ${SERVER_PORT:8080}
@@ -69,6 +74,24 @@ civsetu:
       refresh-per-minute: 30
   cors:
     allowed-origins: ${CIVSETU_CORS_ORIGINS:http://localhost:5173}
+  media:
+    # local (files under local.root) or s3 (any S3-compatible store, e.g. Cloudflare R2)
+    storage: ${CIVSETU_MEDIA_STORAGE:local}
+    max-file-size: 10MB
+    max-images: 5
+    max-voice-notes: 1
+    # Photos are downscaled so the longest side is at most this many pixels
+    max-image-dimension: 2560
+    # Larger images are rejected before decoding (protects memory)
+    max-image-megapixels: 50
+    local:
+      root: ${CIVSETU_MEDIA_ROOT:./uploads}
+    s3:
+      endpoint: ${CIVSETU_S3_ENDPOINT:}
+      region: ${CIVSETU_S3_REGION:auto}
+      bucket: ${CIVSETU_S3_BUCKET:}
+      access-key: ${CIVSETU_S3_ACCESS_KEY:}
+      secret-key: ${CIVSETU_S3_SECRET_KEY:}
   bootstrap-admin:
     # Created on startup only when no Admin exists yet
     name: ${CIVSETU_BOOTSTRAP_ADMIN_NAME:CivSetu Admin}

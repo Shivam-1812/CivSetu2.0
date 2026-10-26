@@ -32,7 +32,21 @@
         <springdoc.version>3.1.1</springdoc.version>
         <bucket4j.version>8.21.0</bucket4j.version>
         <archunit.version>1.5.1</archunit.version>
+        <awssdk.version>2.55.12</awssdk.version>
+        <metadata-extractor.version>2.21.0</metadata-extractor.version>
+        <twelvemonkeys.version>3.15.3</twelvemonkeys.version>
     </properties>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${awssdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -85,6 +99,27 @@
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
+        </dependency>
+        <!-- Media: S3-compatible storage (Cloudflare R2, MinIO), photo orientation, WebP decoding -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drewnoakes</groupId>
+            <artifactId>metadata-extractor</artifactId>
+            <version>${metadata-extractor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-webp</artifactId>
+            <version>${twelvemonkeys.version}</version>
+        </dependency>
+        <!-- More robust JPEG decoding (CMYK, broken markers) than the JDK reader -->
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-jpeg</artifactId>
+            <version>${twelvemonkeys.version}</version>
         </dependency>
 
         <dependency>

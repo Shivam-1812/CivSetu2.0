@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.civsetu.common.domain.Priority;
 import com.civsetu.common.error.ApiException;
@@ -31,6 +32,8 @@ import com.civsetu.issue.entity.PrioritySource;
 import com.civsetu.issue.repository.IssueFilter;
 import com.civsetu.issue.repository.IssueRepository;
 import com.civsetu.issue.repository.IssueSpecifications;
+import com.civsetu.media.entity.MediaKind;
+import com.civsetu.media.service.MediaService;
 import com.civsetu.sla.service.SlaService;
 
 /**
@@ -47,30 +50,42 @@ public class IssueService {
     private final IssueRepository issues;
     private final CategoryService categories;
     private final SlaService sla;
+    private final MediaService media;
     private final IssueResponseMapper mapper;
     private final Clock clock;
 
-    IssueService(IssueRepository issues, CategoryService categories, SlaService sla, IssueResponseMapper mapper,
-            Clock clock) {
+    IssueService(IssueRepository issues, CategoryService categories, SlaService sla, MediaService media,
+            IssueResponseMapper mapper, Clock clock) {
         this.issues = issues;
         this.categories = categories;
         this.sla = sla;
+        this.media = media;
         this.mapper = mapper;
         this.clock = clock;
     }
 
-    /**
-     * A Citizen's new report. Department and priority come from the category's routing rule,
-     * the deadline from the SLA policy for that priority.
-     */
+    /** A Citizen's new report without attachments. */
     @Transactional
     public IssueDetailResponse report(Caller reporter, CreateIssueRequest request) {
+        return report(reporter, request, List.of(), null);
+    }
+
+    /**
+     * A Citizen's new report. Department and priority come from the category's routing rule,
+     * the deadline from the SLA policy for that priority. Photos and the voice note are stored in
+     * the same transaction: if any file is rejected, nothing is saved.
+     */
+    @Transactional
+    public IssueDetailResponse report(Caller reporter, CreateIssueRequest request, List<MultipartFile> images,
+            MultipartFile voice) {
         CategoryResponse route = categories.routeNewIssue(request.category());
         Priority priority = route.defaultPriority();
         Issue issue = issues.save(new Issue(reporter.id(), request.title().trim(), request.description().trim(),
                 route.id(), route.departmentId(), priority, PrioritySource.RULE,
                 GeoPoints.of(request.latitude(), request.longitude()), request.address().trim(),
                 sla.dueAt(priority, clock.instant())));
+        media.attach(issue.getId(), reporter.id(), MediaKind.IMAGE, images);
+        media.attach(issue.getId(), reporter.id(), MediaKind.VOICE, voice == null ? List.of() : List.of(voice));
         return mapper.detail(issue, reporter);
     }
 

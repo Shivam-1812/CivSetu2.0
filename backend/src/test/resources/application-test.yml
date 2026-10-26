@@ -9,6 +9,10 @@ civsetu:
       login-per-minute: 1000
       register-per-minute: 1000
       refresh-per-minute: 1000
+  media:
+    storage: local
+    local:
+      root: target/test-uploads
   bootstrap-admin:
     email: ""
     password: ""

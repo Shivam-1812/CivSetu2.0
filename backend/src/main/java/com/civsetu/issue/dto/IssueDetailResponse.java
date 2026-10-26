@@ -1,9 +1,11 @@
 package com.civsetu.issue.dto;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import com.civsetu.common.domain.Priority;
+import com.civsetu.media.dto.MediaResponse;
 import com.civsetu.issue.entity.IssueStatus;
 import com.civsetu.issue.entity.PrioritySource;
 
@@ -38,7 +40,9 @@ public record IssueDetailResponse(
         UUID duplicateOfId,
         boolean reportedByMe,
         Reporter reporter,
-        UUID assignedAuthorityId) {
+        UUID assignedAuthorityId,
+        /* Attached files the caller may see (photos are public; voice notes are private) */
+        List<MediaResponse> media) {
 
     /** Contact details of the person who reported the issue. Private. */
     public record Reporter(UUID id, String name, String email, String phone) {

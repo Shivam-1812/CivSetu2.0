@@ -1,11 +1,13 @@
 package com.civsetu.issue.controller;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,7 +17,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.civsetu.common.security.Caller;
 import com.civsetu.common.web.PageResponse;
@@ -40,13 +44,26 @@ class IssueController {
         this.issues = issues;
     }
 
-    /** Citizens only: report a new issue. */
-    @PostMapping
+    /** Citizens only: report a new issue without attachments (JSON body). */
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('CITIZEN')")
     ResponseEntity<IssueDetailResponse> report(@AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateIssueRequest request) {
-        IssueDetailResponse created = issues.report(Caller.from(jwt), request);
-        return ResponseEntity.created(URI.create("/api/v1/issues/" + created.id())).body(created);
+        return created(issues.report(Caller.from(jwt), request));
+    }
+
+    /**
+     * Citizens only: report a new issue with photos and a voice note (multipart/form-data).
+     * Parts: {@code data} (the JSON report, sent with Content-Type application/json),
+     * {@code images} (0-5 photos: JPEG, PNG or WebP) and {@code voice} (optional audio).
+     */
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('CITIZEN')")
+    ResponseEntity<IssueDetailResponse> reportWithMedia(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestPart("data") CreateIssueRequest request,
+            @RequestPart(name = "images", required = false) List<MultipartFile> images,
+            @RequestPart(name = "voice", required = false) MultipartFile voice) {
+        return created(issues.report(Caller.from(jwt), request, images, voice));
     }
 
     /** Filtered, paginated list, newest first. */
@@ -70,5 +87,9 @@ class IssueController {
     @GetMapping("/{id}")
     IssueDetailResponse get(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
         return issues.get(id, Caller.from(jwt));
+    }
+
+    private static ResponseEntity<IssueDetailResponse> created(IssueDetailResponse issue) {
+        return ResponseEntity.created(URI.create("/api/v1/issues/" + issue.id())).body(issue);
     }
 }

@@ -1,0 +1,41 @@
+### Register a Citizen and keep the token
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "name": "Asha Patil",
+  "email": "asha.{{$random.alphanumeric(6)}}@example.test",
+  "password": "citizen-pass-123"
+}
+
+> {% client.global.set("token", response.body.accessToken); %}
+
+### Report with a photo (multipart). Put any JPEG next to this file as photo.jpg first.
+# Add more "images" parts for up to 5 photos, and a "voice" part for one audio note.
+POST {{host}}/api/v1/issues
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=CivSetuBoundary
+
+--CivSetuBoundary
+Content-Disposition: form-data; name="data"
+Content-Type: application/json
+
+{
+  "title": "Garbage pile near market",
+  "description": "Not collected for a week; it smells and attracts stray dogs.",
+  "category": "GARBAGE",
+  "latitude": 18.5106,
+  "longitude": 73.8553,
+  "address": "Mandai, Pune"
+}
+--CivSetuBoundary
+Content-Disposition: form-data; name="images"; filename="photo.jpg"
+Content-Type: image/jpeg
+
+< ./photo.jpg
+--CivSetuBoundary--
+
+> {% client.global.set("mediaUrl", response.body.media[0].url); %}
+
+### Download the photo (public, re-encoded without EXIF/GPS)
+GET {{host}}{{mediaUrl}}

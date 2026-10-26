@@ -98,16 +98,16 @@ class ArchitectureTest {
     }
 
     /**
-     * A feature may use another feature's service and dto packages (and its enums), but never
-     * its controllers, repositories, entities or configuration.
+     * A feature may use another feature's service and dto packages (and its enums), but nothing
+     * else: not its controllers, repositories, entities, storage or configuration.
      */
     @Test
     void featuresOnlyUseEachOthersServicesAndDtos() {
         for (String feature : features) {
             String base = ROOT + "." + feature;
-            DescribedPredicate<JavaClass> internals = resideInAnyPackage(base + ".controller..",
-                    base + ".repository..", base + ".config..", base + ".security..")
-                    .or(resideInAPackage(base + ".entity..").and(not(describe("enums", JavaClass::isEnum))));
+            DescribedPredicate<JavaClass> internals = resideInAPackage(base + "..")
+                    .and(not(resideInAnyPackage(base + ".service..", base + ".dto..")))
+                    .and(not(describe("enums", JavaClass::isEnum)));
             for (String other : features) {
                 if (!other.equals(feature)) {
                     noClasses().that().resideInAPackage(ROOT + "." + other + "..")

@@ -57,6 +57,7 @@ src/main/java/com/civsetu/
 ├── user/                        accounts, roles, admin user management
 ├── department/                  departments and categories (category → department routing)
 ├── issue/                       reporting, search, map, visibility rules, demo data
+├── media/                       photo/voice uploads, EXIF stripping, storage (local disk or S3/R2)
 └── sla/                         resolution deadlines per priority
 
 src/main/resources/
@@ -75,6 +76,7 @@ Every feature uses the same sub-packages (only the ones it needs):
 | `entity/` | JPA entities and their enums | `User`, `Role` |
 | `config/` | Feature settings (`@ConfigurationProperties`) and beans | `AuthProperties` |
 | `security/` | Feature-specific security filters | `AuthRateLimitFilter` |
+| `storage/` | Pluggable storage implementations | `LocalDiskStorage`, `S3MediaStorage` |
 
 Tests mirror the same packages under `src/test/java`; shared test helpers live in `support/`.
 
@@ -84,6 +86,8 @@ Tests mirror the same packages under `src/test/java`; shared test helpers live i
 2. Repositories are used only by services.
 3. Controllers return DTOs, never entities.
 4. A feature uses another feature only through its `service` and `dto` packages (enums excepted).
+   When a lower-level feature needs information from a higher one, it defines an interface in its
+   `service` package that the higher feature implements (e.g. `MediaAccessPolicy`).
 5. `common` never depends on a feature, and features have no dependency cycles.
 6. The database schema changes only through a new Flyway migration (`ddl-auto: validate`).
 
@@ -115,3 +119,7 @@ Secrets and URLs come from environment variables; locally they are read from `ba
 - Public without a token: issue list, map and detail, categories, departments. Reporter contact
   details are shown only to the reporter, Admins, and Authorities of the issue's department.
 - Locations are WGS 84 `latitude`/`longitude`; map viewports are `bbox=minLng,minLat,maxLng,maxLat`.
+- Uploads: `POST /api/v1/issues` as `multipart/form-data` with parts `data` (JSON, Content-Type
+  `application/json`), `images` (up to 5 JPEG/PNG/WebP, 10 MB each) and `voice` (one WebM/Ogg/MP4/MP3/WAV).
+  Types are checked by file content; photos are re-encoded, which removes EXIF data such as GPS.
+  Files are served by `GET /api/v1/media/{id}`: report photos are public, voice notes are not.

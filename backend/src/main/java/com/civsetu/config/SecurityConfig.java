@@ -60,6 +60,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/issues/mine").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/issues", "/api/v1/issues/map", "/api/v1/issues/*",
                                 "/api/v1/categories", "/api/v1/departments").permitAll()
+                        // Files: public photos need no token; MediaService checks access per file
+                        .requestMatchers(HttpMethod.GET, "/api/v1/media/*").permitAll()
                         // Admin routes are also guarded per controller with @PreAuthorize
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated());

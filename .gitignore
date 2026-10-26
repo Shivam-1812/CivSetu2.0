@@ -10,6 +10,7 @@
 *.env
 !.env.example
 http-client.private.env.json
+backend/http/*.jpg
 
 # Build output and local data
 target/
