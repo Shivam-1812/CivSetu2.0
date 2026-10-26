@@ -48,6 +48,30 @@ public interface IssueRepository extends JpaRepository<Issue, UUID>, JpaSpecific
 
     List<Issue> findByAssignedAuthorityIdAndStatusIn(UUID authorityId, Collection<IssueStatus> statuses);
 
+    /**
+     * Open issues of a category near a point, most similar title first. Each row is
+     * {issue id, distance in metres, title similarity 0-1}. Uses the geography GiST index for the
+     * distance filter and pg_trgm for similarity.
+     */
+    @Query(value = """
+            SELECT i.id,
+                   ST_Distance(i.location::geography,
+                               ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography) AS distance,
+                   similarity(lower(i.title), lower(:title)) AS title_similarity
+            FROM issues i
+            WHERE ST_DWithin(i.location::geography,
+                             ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography, :radius)
+              AND i.category_id = :categoryId
+              AND i.status IN ('REPORTED', 'ASSIGNED', 'IN_PROGRESS')
+              AND i.created_at >= :since
+              AND i.id <> :excludeId
+            ORDER BY title_similarity DESC, distance ASC
+            LIMIT :maxResults
+            """, nativeQuery = true)
+    List<Object[]> findSimilar(@Param("latitude") double latitude, @Param("longitude") double longitude,
+            @Param("categoryId") UUID categoryId, @Param("title") String title, @Param("radius") double radius,
+            @Param("since") Instant since, @Param("excludeId") UUID excludeId, @Param("maxResults") int maxResults);
+
     /** Demo data only: places a seeded issue in the past (auditing always stamps "now"). */
     @Modifying
     @Query(value = "UPDATE issues SET created_at = :createdAt, updated_at = :createdAt, sla_due_at = :slaDueAt "

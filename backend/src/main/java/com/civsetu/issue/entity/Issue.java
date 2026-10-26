@@ -79,6 +79,10 @@ public class Issue extends BaseEntity {
     @Column(name = "flagged_for_review", nullable = false)
     private boolean flaggedForReview;
 
+    // Community escalation raises the priority at most once per issue
+    @Column(name = "priority_raised_by_community", nullable = false)
+    private boolean priorityRaisedByCommunity;
+
     @Version
     private long version;
 
@@ -140,6 +144,20 @@ public class Issue extends BaseEntity {
     public void returnForRerouting() {
         this.status = IssueStatus.REPORTED;
         this.assignedAuthorityId = null;
+    }
+
+    /** Enough residents confirmed the problem: one level more urgent, possibly an earlier deadline. */
+    public void raisePriorityByCommunity(Priority raised, Instant deadline) {
+        this.priority = raised;
+        this.slaDueAt = deadline;
+        this.priorityRaisedByCommunity = true;
+    }
+
+    /** Already being handled under another report. Closes this one. */
+    public void markDuplicate(UUID originalIssueId, Instant at) {
+        this.status = IssueStatus.DUPLICATE;
+        this.duplicateOfId = originalIssueId;
+        this.closedAt = at;
     }
 
     /** The reporter is not satisfied: open again with a fresh deadline. */
@@ -218,6 +236,10 @@ public class Issue extends BaseEntity {
 
     public int getReopenCount() {
         return reopenCount;
+    }
+
+    public boolean isPriorityRaisedByCommunity() {
+        return priorityRaisedByCommunity;
     }
 
     public boolean isFlaggedForReview() {

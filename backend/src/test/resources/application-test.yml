@@ -21,6 +21,9 @@ civsetu:
     # Triage runs inline right after commit, and no scheduler runs, so tests are deterministic
     async-triage: false
     sweep-enabled: false
+  engagement:
+    # Low threshold so escalation can be tested with a few voters
+    escalation-votes: 3
   bootstrap-admin:
     email: ""
     password: ""

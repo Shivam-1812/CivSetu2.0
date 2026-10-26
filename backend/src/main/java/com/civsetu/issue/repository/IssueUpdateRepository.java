@@ -9,5 +9,5 @@ import com.civsetu.issue.entity.IssueUpdate;
 
 public interface IssueUpdateRepository extends JpaRepository<IssueUpdate, UUID> {
 
-    List<IssueUpdate> findByIssueIdOrderByCreatedAtAscIdAsc(UUID issueId);
+    List<IssueUpdate> findByIssueIdOrderBySeqAsc(UUID issueId);
 }

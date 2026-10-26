@@ -19,7 +19,7 @@ import com.civsetu.issue.entity.IssueStatus;
  */
 final class TransitionPolicy {
 
-    enum Action { PLAN, RESOLVE, REJECT, RETURN, REOPEN }
+    enum Action { PLAN, RESOLVE, REJECT, RETURN, MARK_DUPLICATE, REOPEN }
 
     enum Actor {
         /** The Authority the system assigned to this issue. */
@@ -32,6 +32,8 @@ final class TransitionPolicy {
     }
 
     static final Map<Action, Rule> RULES = new EnumMap<>(Map.of(
+            Action.MARK_DUPLICATE, new Rule(EnumSet.of(IssueStatus.ASSIGNED, IssueStatus.IN_PROGRESS),
+                    IssueStatus.DUPLICATE, Actor.ASSIGNED_AUTHORITY),
             Action.PLAN, new Rule(EnumSet.of(IssueStatus.ASSIGNED), IssueStatus.IN_PROGRESS, Actor.ASSIGNED_AUTHORITY),
             Action.RESOLVE, new Rule(EnumSet.of(IssueStatus.IN_PROGRESS), IssueStatus.RESOLVED,
                     Actor.ASSIGNED_AUTHORITY),
@@ -39,8 +41,8 @@ final class TransitionPolicy {
                     Actor.ASSIGNED_AUTHORITY),
             Action.RETURN, new Rule(EnumSet.of(IssueStatus.ASSIGNED, IssueStatus.IN_PROGRESS), IssueStatus.REPORTED,
                     Actor.ASSIGNED_AUTHORITY),
-            Action.REOPEN, new Rule(EnumSet.of(IssueStatus.RESOLVED, IssueStatus.REJECTED), IssueStatus.ASSIGNED,
-                    Actor.REPORTER)));
+            Action.REOPEN, new Rule(EnumSet.of(IssueStatus.RESOLVED, IssueStatus.REJECTED, IssueStatus.DUPLICATE),
+                    IssueStatus.ASSIGNED, Actor.REPORTER)));
 
     private TransitionPolicy() {
     }

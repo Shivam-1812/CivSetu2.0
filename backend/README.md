@@ -57,8 +57,10 @@ src/main/java/com/civsetu/
 ├── auth/                        register, login, refresh tokens, JWT
 ├── user/                        accounts, roles, admin user management
 ├── department/                  departments and categories (category → department routing)
+├── engagement/                  votes (one per citizen) and comments, with moderation
 ├── issue/                       reporting, search, map, workflow (plan/resolve/reject/return/reopen), history
 ├── media/                       photo/voice uploads, EXIF stripping, storage (local disk or S3/R2)
+├── notification/                in-app notifications and the live Server-Sent Events stream
 ├── sla/                         resolution deadlines per priority
 └── triage/                      automatic routing: AI advisor (Gemini) with rule-engine fallback
 
@@ -128,6 +130,13 @@ Secrets and URLs come from environment variables; locally they are read from `ba
   with a reason, or returns a misrouted issue for automatic re-routing; the reporter may reopen. Each request
   carries the issue `version` from the last read; a stale version gets 409 `STALE_ISSUE`.
 - `GET /api/v1/issues/{id}/history` is the public, append-only timeline of every step.
+- Community: citizens vote AGREE/DISAGREE (one vote each, not on their own report) and comment (3 per
+  person per issue). When net agree votes reach `civsetu.engagement.escalation-votes` (default 10) the
+  system raises an open issue's priority one level, once, and records it in the history.
+- Duplicates: `GET /api/v1/issues/similar?latitude=&longitude=&category=&title=` before reporting, and
+  `GET /api/v1/issues/{id}/similar`; the assigned Authority can close an issue as a duplicate.
+- Live notifications: `POST /api/v1/notifications/stream-ticket`, then `new EventSource(streamUrl)`.
+  Events are named `notification`; the browser's automatic `Last-Event-ID` replays missed ones.
 - Uploads: `POST /api/v1/issues` as `multipart/form-data` with parts `data` (JSON, Content-Type
   `application/json`), `images` (up to 5 JPEG/PNG/WebP, 10 MB each) and `voice` (one WebM/Ogg/MP4/MP3/WAV).
   Types are checked by file content; photos are re-encoded, which removes EXIF data such as GPS.

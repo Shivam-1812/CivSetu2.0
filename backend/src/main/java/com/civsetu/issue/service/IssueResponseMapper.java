@@ -11,9 +11,11 @@ import com.civsetu.department.dto.CategoryResponse;
 import com.civsetu.department.dto.DepartmentResponse;
 import com.civsetu.department.service.CategoryService;
 import com.civsetu.department.service.DepartmentService;
+import com.civsetu.engagement.service.EngagementService;
 import com.civsetu.issue.dto.IssueDetailResponse;
 import com.civsetu.issue.dto.IssueSummaryResponse;
 import com.civsetu.issue.dto.MapResponse;
+import com.civsetu.issue.dto.SimilarIssueResponse;
 import com.civsetu.issue.entity.Issue;
 import com.civsetu.media.dto.MediaResponse;
 import com.civsetu.media.service.MediaService;
@@ -33,14 +35,16 @@ class IssueResponseMapper {
     private final UserService users;
     private final MediaService media;
     private final TriageService triage;
+    private final EngagementService engagement;
 
     IssueResponseMapper(CategoryService categories, DepartmentService departments, UserService users,
-            MediaService media, TriageService triage) {
+            MediaService media, TriageService triage, EngagementService engagement) {
         this.categories = categories;
         this.departments = departments;
         this.users = users;
         this.media = media;
         this.triage = triage;
+        this.engagement = engagement;
     }
 
     /** Category and department names, loaded once per request (both tables are small). */
@@ -65,6 +69,10 @@ class IssueResponseMapper {
     }
 
     IssueDetailResponse detail(Issue issue, Caller caller) {
+        return detail(issue, caller, null);
+    }
+
+    IssueDetailResponse detail(Issue issue, Caller caller, List<SimilarIssueResponse> possibleDuplicates) {
         Labels labels = labels();
         CategoryResponse category = labels.categories().get(issue.getCategoryId());
         DepartmentResponse department = labels.departments().get(issue.getDepartmentId());
@@ -91,6 +99,7 @@ class IssueResponseMapper {
                 issue.getVersion(), isReporter, reporter,
                 isStaff ? issue.getAssignedAuthorityId() : null,
                 isStaff ? issue.isFlaggedForReview() : null,
-                visibleMedia);
+                visibleMedia, engagement.tally(issue.getId(), caller), engagement.commentCount(issue.getId()),
+                possibleDuplicates);
     }
 }

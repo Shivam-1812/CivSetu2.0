@@ -18,6 +18,7 @@ import com.civsetu.common.security.Caller;
 import com.civsetu.department.dto.DepartmentResponse;
 import com.civsetu.department.service.DepartmentService;
 import com.civsetu.issue.config.WorkflowProperties;
+import com.civsetu.issue.dto.DuplicateRequest;
 import com.civsetu.issue.dto.HistoryEntryResponse;
 import com.civsetu.issue.dto.IssueDetailResponse;
 import com.civsetu.issue.dto.PlanRequest;
@@ -142,8 +143,31 @@ public class IssueWorkflowService {
         return respond(issue, caller);
     }
 
+    /** ASSIGNED or IN_PROGRESS → DUPLICATE, pointing at the issue that already covers the problem. */
+    public IssueDetailResponse markDuplicate(UUID issueId, Caller caller, DuplicateRequest request) {
+        Issue issue = load(issueId, request.version());
+        TransitionPolicy.check(TransitionPolicy.Action.MARK_DUPLICATE, issue, caller);
+        Issue original = issues.findById(request.duplicateOfId())
+                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "ORIGINAL_NOT_FOUND",
+                        "The original issue was not found."));
+        if (original.getId().equals(issueId) || original.getStatus() == IssueStatus.DUPLICATE
+                || original.getStatus() == IssueStatus.REJECTED) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ORIGINAL",
+                    "The original must be another issue that is open or resolved.");
+        }
+        IssueStatus from = issue.getStatus();
+        Instant now = clock.instant();
+        issue.markDuplicate(original.getId(), now);
+        endCurrentAssignment(issueId, now);
+        history.record(issue, caller.id(), IssueUpdate.ActorRole.AUTHORITY, IssueUpdate.Action.MARKED_DUPLICATE,
+                from, "Already reported as \"" + original.getTitle() + "\" (" + original.getId() + ")."
+                        + (request.remarks() == null || request.remarks().isBlank() ? "" : " " + request.remarks().trim()));
+        audit.record(caller, "ISSUE_MARKED_DUPLICATE", "ISSUE", issueId, "original=" + original.getId());
+        return respond(issue, caller);
+    }
+
     /**
-     * The reporter reopens a resolved or rejected issue, within the reopen window and limit.
+     * The reporter reopens a resolved, rejected or duplicate issue, within the reopen window and limit.
      * It goes back to the same Authority if still active, otherwise to the least-loaded one,
      * with a fresh deadline for its priority.
      */
@@ -183,7 +207,7 @@ public class IssueWorkflowService {
                 .filter(file -> file.updateId() != null)
                 .filter(file -> IssueMediaAccess.canView(issue, file.kind(), caller))
                 .toList();
-        return updates.findByIssueIdOrderByCreatedAtAscIdAsc(issueId).stream()
+        return updates.findByIssueIdOrderBySeqAsc(issueId).stream()
                 .map(step -> new HistoryEntryResponse(step.getId(), step.getAction(), step.getFromStatus(),
                         step.getToStatus(), step.getActorRole(),
                         step.getDepartmentId() == null ? null : departmentNames.get(step.getDepartmentId()).name(),

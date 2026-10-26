@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.civsetu.common.security.Caller;
+import com.civsetu.issue.dto.DuplicateRequest;
 import com.civsetu.issue.dto.HistoryEntryResponse;
 import com.civsetu.issue.dto.IssueDetailResponse;
 import com.civsetu.issue.dto.PlanRequest;
@@ -80,7 +81,16 @@ class IssueWorkflowController {
         return workflow.returnForRerouting(id, Caller.from(jwt), request);
     }
 
-    /** Reporter: reopen a resolved or rejected issue. */
+    /** Assigned Authority: close as a duplicate of another report. */
+    @PostMapping(path = "/duplicate", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('AUTHORITY')")
+    IssueDetailResponse markDuplicate(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody DuplicateRequest request) {
+        return workflow.markDuplicate(id, Caller.from(jwt), request);
+    }
+
+    /** Reporter: reopen a resolved, rejected or duplicate issue. */
+
     @PostMapping(path = "/reopen", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('CITIZEN')")
     IssueDetailResponse reopen(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt,

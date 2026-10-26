@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.civsetu.common.domain.Priority;
+import com.civsetu.engagement.dto.VoteTally;
 import com.civsetu.issue.entity.IssueStatus;
 import com.civsetu.issue.entity.PrioritySource;
 import com.civsetu.media.dto.MediaResponse;
@@ -22,6 +23,7 @@ import com.civsetu.media.dto.MediaResponse;
  * @param version        send this back with any workflow action; it detects stale views
  * @param priorityReason the latest routing decision's explanation (AI or rules)
  * @param media          attached files the caller may see (photos are public; voice notes are private)
+ * @param votes          agree/disagree counts and the caller's own vote
  */
 public record IssueDetailResponse(
         UUID id,
@@ -50,7 +52,11 @@ public record IssueDetailResponse(
         Reporter reporter,
         UUID assignedAuthorityId,
         Boolean flaggedForReview,
-        List<MediaResponse> media) {
+        List<MediaResponse> media,
+        VoteTally votes,
+        long commentCount,
+        /* Only in the response to a new report: open issues nearby that may be the same problem */
+        List<SimilarIssueResponse> possibleDuplicates) {
 
     /** Contact details of the person who reported the issue. Private. */
     public record Reporter(UUID id, String name, String email, String phone) {

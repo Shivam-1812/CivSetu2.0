@@ -115,6 +115,19 @@ civsetu:
     sweep-batch-size: 10
     max-reopens: 2
     reopen-window: 14d
+  engagement:
+    max-comments-per-user: 3
+    # Net agree votes that make the system raise an open issue's priority one level (once)
+    escalation-votes: 10
+  duplicates:
+    radius-meters: 200
+    window-days: 30
+    max-results: 5
+  notifications:
+    heartbeat: 25s
+    stream-timeout: 30m
+    ticket-ttl: 60s
+    max-streams-per-user: 5
   bootstrap-admin:
     # Created on startup only when no Admin exists yet
     name: ${CIVSETU_BOOTSTRAP_ADMIN_NAME:CivSetu Admin}

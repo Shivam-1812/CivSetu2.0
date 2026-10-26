@@ -29,6 +29,8 @@ import com.civsetu.issue.dto.IssueDetailResponse;
 import com.civsetu.issue.dto.IssueSearchParams;
 import com.civsetu.issue.dto.IssueSummaryResponse;
 import com.civsetu.issue.dto.MapResponse;
+import com.civsetu.issue.dto.SimilarIssueParams;
+import com.civsetu.issue.dto.SimilarIssueResponse;
 import com.civsetu.issue.entity.IssueStatus;
 import com.civsetu.issue.service.IssueService;
 
@@ -86,6 +88,18 @@ class IssueController {
     PageResponse<IssueSummaryResponse> assigned(@AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) List<IssueStatus> status, Pageable pageable) {
         return issues.assignedTo(Caller.from(jwt), status, pageable);
+    }
+
+    /** Before reporting: open issues of this category nearby with a similar title. */
+    @GetMapping("/similar")
+    List<SimilarIssueResponse> similarAt(@Valid SimilarIssueParams params) {
+        return issues.similarAt(params);
+    }
+
+    /** Open issues that may describe the same problem as this one. */
+    @GetMapping("/{id}/similar")
+    List<SimilarIssueResponse> similarTo(@PathVariable UUID id) {
+        return issues.similarTo(id);
     }
 
     /** The caller's own reports. */

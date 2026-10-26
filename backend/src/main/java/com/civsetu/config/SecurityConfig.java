@@ -60,8 +60,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/issues/mine", "/api/v1/issues/assigned")
                         .authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/issues", "/api/v1/issues/map", "/api/v1/issues/*",
-                                "/api/v1/issues/*/history",
+                                "/api/v1/issues/*/history", "/api/v1/issues/*/similar", "/api/v1/issues/*/comments",
+                                "/api/v1/issues/*/votes",
                                 "/api/v1/categories", "/api/v1/departments").permitAll()
+                        // Live notifications authenticate with a one-time ticket (EventSource cannot send headers)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/notifications/stream").permitAll()
                         // Files: public photos need no token; MediaService checks access per file
                         .requestMatchers(HttpMethod.GET, "/api/v1/media/*").permitAll()
                         // Admin routes are also guarded per controller with @PreAuthorize

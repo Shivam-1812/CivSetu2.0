@@ -1,8 +1,11 @@
 package com.civsetu.support;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -15,9 +18,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 
 /**
  * Helpers for API tests: sign-up, login and seeded staff accounts. Every helper uses a fresh,
@@ -93,6 +98,22 @@ public abstract class ApiTest extends IntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn();
         return JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+    }
+
+    /** The issue's current version, needed by every workflow action. */
+    protected long issueVersion(String issueId) throws Exception {
+        String body = mvc.perform(get("/api/v1/issues/" + issueId)).andReturn().getResponse().getContentAsString();
+        return JsonPath.<Number>read(body, "$.version").longValue();
+    }
+
+    /** The assigned Authority starts work on the issue. */
+    protected void planIssue(String issueId, Session authority) throws Exception {
+        MockMultipartHttpServletRequestBuilder request = multipart("/api/v1/issues/" + issueId + "/plan");
+        request.file(new MockMultipartFile("data", "", MediaType.APPLICATION_JSON_VALUE,
+                json("{\"version\":%d,\"actionTaken\":\"Crew sent\"}", issueVersion(issueId))
+                        .getBytes(StandardCharsets.UTF_8)));
+        request.header(HttpHeaders.AUTHORIZATION, bearer(authority.accessToken()));
+        mvc.perform(request).andExpect(status().isOk());
     }
 
     protected UUID departmentIdByCode(String code) {

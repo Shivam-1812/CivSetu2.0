@@ -20,7 +20,10 @@ public class IssueUpdate extends BaseEntity {
     /** Who performed a step. SYSTEM steps have no actor id. */
     public enum ActorRole { SYSTEM, CITIZEN, AUTHORITY }
 
-    public enum Action { REPORTED, ASSIGNED, PLANNED, RESOLVED, REJECTED, RETURNED, REOPENED, REASSIGNED }
+    public enum Action {
+        REPORTED, ASSIGNED, PLANNED, RESOLVED, REJECTED, RETURNED, REOPENED, REASSIGNED, PRIORITY_RAISED,
+        MARKED_DUPLICATE
+    }
 
     @Column(name = "issue_id", nullable = false, updatable = false)
     private UUID issueId;
@@ -58,6 +61,10 @@ public class IssueUpdate extends BaseEntity {
 
     @Column(name = "resources_used", columnDefinition = "text", updatable = false)
     private String resourcesUsed;
+
+    // Insertion order, assigned by the database (bigserial); used for stable ordering
+    @Column(insertable = false, updatable = false)
+    private Long seq;
 
     protected IssueUpdate() {
     }

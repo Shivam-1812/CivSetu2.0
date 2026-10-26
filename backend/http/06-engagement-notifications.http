@@ -1,0 +1,50 @@
+### Sign in as a citizen first (see 02-auth.http) so {{token}} is set, and pick an issue id
+@issueId = 00000000-0000-0000-0000-000000000000
+
+### Before reporting: is this already reported nearby?
+GET {{host}}/api/v1/issues/similar?latitude=18.5204&longitude=73.8567&category=POTHOLE&title=pothole near bus stop
+
+### Possible duplicates of an existing issue
+GET {{host}}/api/v1/issues/{{issueId}}/similar
+
+### Agree that the problem exists (citizens only, not on your own report; safe to repeat)
+PUT {{host}}/api/v1/issues/{{issueId}}/vote
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "value": "AGREE" }
+
+### Vote counts (public)
+GET {{host}}/api/v1/issues/{{issueId}}/votes
+
+### Comment (anyone signed in; at most 3 per person per issue)
+POST {{host}}/api/v1/issues/{{issueId}}/comments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "body": "Same problem outside our building." }
+
+### Comments (public, oldest first)
+GET {{host}}/api/v1/issues/{{issueId}}/comments
+
+### My notifications, newest first
+GET {{host}}/api/v1/notifications
+Authorization: Bearer {{token}}
+
+###
+GET {{host}}/api/v1/notifications/unread-count
+Authorization: Bearer {{token}}
+
+###
+POST {{host}}/api/v1/notifications/read-all
+Authorization: Bearer {{token}}
+
+### Live stream: get a one-time ticket, then open the streamUrl in a browser EventSource
+POST {{host}}/api/v1/notifications/stream-ticket
+Authorization: Bearer {{token}}
+
+> {% client.global.set("streamUrl", response.body.streamUrl); %}
+
+### Opens the stream (IntelliJ shows events as they arrive; stop the request to close it)
+GET {{host}}{{streamUrl}}
+Accept: text/event-stream

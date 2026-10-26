@@ -1,9 +1,13 @@
 package com.civsetu.issue.service;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -28,6 +32,9 @@ import com.civsetu.issue.dto.IssueDetailResponse;
 import com.civsetu.issue.dto.IssueSearchParams;
 import com.civsetu.issue.dto.IssueSummaryResponse;
 import com.civsetu.issue.dto.MapResponse;
+import com.civsetu.issue.dto.SimilarIssueParams;
+import com.civsetu.issue.dto.SimilarIssueResponse;
+import com.civsetu.issue.config.DuplicateProperties;
 import com.civsetu.issue.entity.Issue;
 import com.civsetu.issue.entity.IssueStatus;
 import com.civsetu.issue.entity.IssueUpdate;
@@ -48,6 +55,8 @@ public class IssueService {
 
     /** Most markers returned for one map viewport. */
     static final int MAP_LIMIT = 1000;
+    // Matches no issue; used when there is nothing to exclude from the similar-issue search
+    private static final UUID NO_ISSUE = new UUID(0, 0);
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
 
     private final IssueRepository issues;
@@ -57,10 +66,12 @@ public class IssueService {
     private final IssueResponseMapper mapper;
     private final IssueHistory history;
     private final ApplicationEventPublisher events;
+    private final DuplicateProperties duplicates;
     private final Clock clock;
 
     IssueService(IssueRepository issues, CategoryService categories, SlaService sla, MediaService media,
-            IssueResponseMapper mapper, IssueHistory history, ApplicationEventPublisher events, Clock clock) {
+            IssueResponseMapper mapper, IssueHistory history, ApplicationEventPublisher events,
+            DuplicateProperties duplicates, Clock clock) {
         this.issues = issues;
         this.categories = categories;
         this.sla = sla;
@@ -68,6 +79,7 @@ public class IssueService {
         this.mapper = mapper;
         this.history = history;
         this.events = events;
+        this.duplicates = duplicates;
         this.clock = clock;
     }
 
@@ -97,7 +109,25 @@ public class IssueService {
         history.record(issue, reporter.id(), IssueUpdate.ActorRole.CITIZEN, IssueUpdate.Action.REPORTED, null,
                 "Issue reported.");
         events.publishEvent(new IssueReportedEvent(issue.getId()));
-        return mapper.detail(issue, reporter);
+        // Shown to the reporter right away: someone may already have reported the same problem
+        return mapper.detail(issue, reporter, similar(issue.getLatitude(), issue.getLongitude(), issue.getCategoryId(),
+                issue.getTitle(), issue.getId()));
+    }
+
+    /** Open issues that may describe the same problem as this one. */
+    public List<SimilarIssueResponse> similarTo(UUID issueId) {
+        Issue issue = issues.findById(issueId).orElseThrow(() -> ApiException.notFound("Issue"));
+        return similar(issue.getLatitude(), issue.getLongitude(), issue.getCategoryId(), issue.getTitle(),
+                issue.getId());
+    }
+
+    /** Before reporting: is this problem already reported nearby? */
+    public List<SimilarIssueResponse> similarAt(SimilarIssueParams params) {
+        UUID categoryId = categories.findByCode(params.category().trim())
+                .map(CategoryResponse::id)
+                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "UNKNOWN_CATEGORY",
+                        "Category '" + params.category() + "' does not exist."));
+        return similar(params.latitude(), params.longitude(), categoryId, params.title(), NO_ISSUE);
     }
 
     /** An Authority's work queue: open issues assigned to them, newest first. */
@@ -141,6 +171,22 @@ public class IssueService {
     public IssueDetailResponse get(UUID id, Caller caller) {
         Issue issue = issues.findById(id).orElseThrow(() -> ApiException.notFound("Issue"));
         return mapper.detail(issue, caller);
+    }
+
+    private List<SimilarIssueResponse> similar(double latitude, double longitude, UUID categoryId, String title,
+            UUID excludeId) {
+        Instant since = clock.instant().minus(Duration.ofDays(duplicates.windowDays()));
+        List<Object[]> rows = issues.findSimilar(latitude, longitude, categoryId, title, duplicates.radiusMeters(),
+                since, excludeId, duplicates.maxResults());
+        Map<UUID, Issue> found = issues.findAllById(rows.stream().map(row -> (UUID) row[0]).toList()).stream()
+                .collect(Collectors.toMap(Issue::getId, Function.identity()));
+        IssueResponseMapper.Labels labels = mapper.labels();
+        return rows.stream()
+                .filter(row -> found.containsKey((UUID) row[0]))
+                .map(row -> new SimilarIssueResponse(mapper.summary(found.get((UUID) row[0]), labels),
+                        (int) Math.round(((Number) row[1]).doubleValue()),
+                        Math.round(((Number) row[2]).doubleValue() * 100) / 100.0))
+                .toList();
     }
 
     private PageResponse<IssueSummaryResponse> page(IssueFilter filter, Pageable pageable) {
