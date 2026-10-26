@@ -13,6 +13,14 @@ civsetu:
     storage: local
     local:
       root: target/test-uploads
+  triage:
+    gemini:
+      # Tests never call Google: no key means the rule engine decides
+      api-key: ""
+  workflow:
+    # Triage runs inline right after commit, and no scheduler runs, so tests are deterministic
+    async-triage: false
+    sweep-enabled: false
   bootstrap-admin:
     email: ""
     password: ""

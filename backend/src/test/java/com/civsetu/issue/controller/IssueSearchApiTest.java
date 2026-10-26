@@ -58,8 +58,11 @@ class IssueSearchApiTest extends ApiTest {
         mvc.perform(get("/api/v1/issues").param("bbox", region.bbox()).param("q", "%"))
                 .andExpect(jsonPath("$.totalElements").value(0));
 
-        mvc.perform(get("/api/v1/issues").param("bbox", region.bbox()).param("status", "REPORTED"))
+        // Triage routes every report straight away, so none stays REPORTED
+        mvc.perform(get("/api/v1/issues").param("bbox", region.bbox()).param("status", "ASSIGNED"))
                 .andExpect(jsonPath("$.totalElements").value(3));
+        mvc.perform(get("/api/v1/issues").param("bbox", region.bbox()).param("status", "REPORTED"))
+                .andExpect(jsonPath("$.totalElements").value(0));
         mvc.perform(get("/api/v1/issues").param("bbox", region.bbox()).param("status", "RESOLVED"))
                 .andExpect(jsonPath("$.totalElements").value(0));
     }

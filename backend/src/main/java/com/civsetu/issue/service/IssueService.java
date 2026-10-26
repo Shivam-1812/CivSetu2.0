@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +29,8 @@ import com.civsetu.issue.dto.IssueSearchParams;
 import com.civsetu.issue.dto.IssueSummaryResponse;
 import com.civsetu.issue.dto.MapResponse;
 import com.civsetu.issue.entity.Issue;
+import com.civsetu.issue.entity.IssueStatus;
+import com.civsetu.issue.entity.IssueUpdate;
 import com.civsetu.issue.entity.PrioritySource;
 import com.civsetu.issue.repository.IssueFilter;
 import com.civsetu.issue.repository.IssueRepository;
@@ -52,15 +55,19 @@ public class IssueService {
     private final SlaService sla;
     private final MediaService media;
     private final IssueResponseMapper mapper;
+    private final IssueHistory history;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     IssueService(IssueRepository issues, CategoryService categories, SlaService sla, MediaService media,
-            IssueResponseMapper mapper, Clock clock) {
+            IssueResponseMapper mapper, IssueHistory history, ApplicationEventPublisher events, Clock clock) {
         this.issues = issues;
         this.categories = categories;
         this.sla = sla;
         this.media = media;
         this.mapper = mapper;
+        this.history = history;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -71,9 +78,10 @@ public class IssueService {
     }
 
     /**
-     * A Citizen's new report. Department and priority come from the category's routing rule,
-     * the deadline from the SLA policy for that priority. Photos and the voice note are stored in
-     * the same transaction: if any file is rejected, nothing is saved.
+     * A Citizen's new report, saved as REPORTED. Department, priority and deadline start as the
+     * category's defaults; automatic triage replaces them right after the report is committed.
+     * Photos and the voice note are stored in the same transaction: if any file is rejected,
+     * nothing is saved.
      */
     @Transactional
     public IssueDetailResponse report(Caller reporter, CreateIssueRequest request, List<MultipartFile> images,
@@ -86,7 +94,21 @@ public class IssueService {
                 sla.dueAt(priority, clock.instant())));
         media.attach(issue.getId(), reporter.id(), MediaKind.IMAGE, images);
         media.attach(issue.getId(), reporter.id(), MediaKind.VOICE, voice == null ? List.of() : List.of(voice));
+        history.record(issue, reporter.id(), IssueUpdate.ActorRole.CITIZEN, IssueUpdate.Action.REPORTED, null,
+                "Issue reported.");
+        events.publishEvent(new IssueReportedEvent(issue.getId()));
         return mapper.detail(issue, reporter);
+    }
+
+    /** An Authority's work queue: open issues assigned to them, newest first. */
+    public PageResponse<IssueSummaryResponse> assignedTo(Caller authority, List<IssueStatus> statuses,
+            Pageable pageable) {
+        List<IssueStatus> wanted = statuses == null || statuses.isEmpty()
+                ? List.of(IssueStatus.ASSIGNED, IssueStatus.IN_PROGRESS)
+                : statuses;
+        IssueFilter queue = new IssueFilter(wanted, null, null, null, null, null, null, null, authority.id(),
+                null, null, null, null);
+        return page(queue, pageable);
     }
 
     public PageResponse<IssueSummaryResponse> search(IssueSearchParams params, Pageable pageable) {
@@ -95,7 +117,7 @@ public class IssueService {
 
     /** The caller's own reports, newest first. */
     public PageResponse<IssueSummaryResponse> reportedBy(Caller caller, Pageable pageable) {
-        IssueFilter mine = new IssueFilter(null, null, null, null, null, null, null, caller.id(),
+        IssueFilter mine = new IssueFilter(null, null, null, null, null, null, null, caller.id(), null,
                 null, null, null, null);
         return page(mine, pageable);
     }
@@ -142,7 +164,7 @@ public class IssueService {
         }
         BoundingBox box = params.bbox() == null || params.bbox().isBlank() ? null : BoundingBox.parse(params.bbox());
         return new IssueFilter(params.status(), categoryId, params.department(), params.priority(), params.from(),
-                params.to(), params.q(), null,
+                params.to(), params.q(), null, null,
                 box == null ? null : box.minLongitude(), box == null ? null : box.minLatitude(),
                 box == null ? null : box.maxLongitude(), box == null ? null : box.maxLatitude());
     }

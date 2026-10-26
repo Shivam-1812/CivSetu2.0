@@ -13,7 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.civsetu.audit.service.AuditService;
 import com.civsetu.common.error.ApiException;
+import com.civsetu.common.security.Caller;
 import com.civsetu.department.dto.CategoryResponse;
 import com.civsetu.department.dto.CreateCategoryRequest;
 import com.civsetu.department.dto.UpdateCategoryRequest;
@@ -32,10 +34,12 @@ public class CategoryService {
 
     private final CategoryRepository categories;
     private final DepartmentRepository departments;
+    private final AuditService audit;
 
-    CategoryService(CategoryRepository categories, DepartmentRepository departments) {
+    CategoryService(CategoryRepository categories, DepartmentRepository departments, AuditService audit) {
         this.categories = categories;
         this.departments = departments;
+        this.audit = audit;
     }
 
     public List<CategoryResponse> listActive() {
@@ -68,7 +72,7 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryResponse create(CreateCategoryRequest request) {
+    public CategoryResponse create(Caller admin, CreateCategoryRequest request) {
         requireActiveDepartment(request.departmentId());
         if (categories.existsByCode(request.code())) {
             throw codeTaken();
@@ -76,6 +80,8 @@ public class CategoryService {
         try {
             Category saved = categories.saveAndFlush(new Category(request.code(), request.label().trim(),
                     request.departmentId(), request.defaultPriority()));
+            audit.record(admin, "CATEGORY_CREATED", "CATEGORY", saved.getId(), "code=" + saved.getCode()
+                    + ", department=" + saved.getDefaultDepartmentId() + ", priority=" + saved.getDefaultPriority());
             return CategoryResponse.from(saved);
         } catch (DataIntegrityViolationException e) {
             throw codeTaken();
@@ -83,7 +89,7 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryResponse update(UUID id, UpdateCategoryRequest request) {
+    public CategoryResponse update(Caller admin, UUID id, UpdateCategoryRequest request) {
         Category category = categories.findById(id).orElseThrow(() -> ApiException.notFound("Category"));
         if (request.label() != null) {
             category.setLabel(request.label().trim());
@@ -102,6 +108,8 @@ public class CategoryService {
             }
             category.setActive(request.active());
         }
+        audit.record(admin, "CATEGORY_UPDATED", "CATEGORY", id, "label=" + request.label() + ", department="
+                + request.departmentId() + ", priority=" + request.defaultPriority() + ", active=" + request.active());
         return CategoryResponse.from(category);
     }
 

@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.civsetu.common.security.Caller;
 import com.civsetu.department.dto.CreateDepartmentRequest;
 import com.civsetu.department.dto.DepartmentResponse;
 import com.civsetu.department.dto.UpdateDepartmentRequest;
@@ -40,12 +43,13 @@ class AdminDepartmentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    DepartmentResponse create(@Valid @RequestBody CreateDepartmentRequest request) {
-        return departments.create(request);
+    DepartmentResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateDepartmentRequest request) {
+        return departments.create(Caller.from(jwt), request);
     }
 
     @PatchMapping("/{id}")
-    DepartmentResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateDepartmentRequest request) {
-        return departments.update(id, request);
+    DepartmentResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+            @Valid @RequestBody UpdateDepartmentRequest request) {
+        return departments.update(Caller.from(jwt), id, request);
     }
 }

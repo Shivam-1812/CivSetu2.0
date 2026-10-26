@@ -92,6 +92,29 @@ civsetu:
       bucket: ${CIVSETU_S3_BUCKET:}
       access-key: ${CIVSETU_S3_ACCESS_KEY:}
       secret-key: ${CIVSETU_S3_SECRET_KEY:}
+  triage:
+    # Longest wait for the AI before the rule engine decides instead
+    timeout: 20s
+    # AI answers below this confidence (0-1) are not used
+    min-confidence: 0.6
+    # Report photos sent to the AI
+    max-images: 3
+    # Department for issues no other department fits
+    fallback-department: GENERAL
+    gemini:
+      # Leave empty to run on rules only
+      api-key: ${CIVSETU_GEMINI_API_KEY:}
+      model: ${CIVSETU_GEMINI_MODEL:gemini-3.5-flash-lite}
+      base-url: https://generativelanguage.googleapis.com
+  workflow:
+    async-triage: true
+    # Safety net: retries stuck triage and fills missing assignments
+    sweep-enabled: true
+    sweep-interval: 60s
+    retry-triage-after: 3m
+    sweep-batch-size: 10
+    max-reopens: 2
+    reopen-window: 14d
   bootstrap-admin:
     # Created on startup only when no Admin exists yet
     name: ${CIVSETU_BOOTSTRAP_ADMIN_NAME:CivSetu Admin}

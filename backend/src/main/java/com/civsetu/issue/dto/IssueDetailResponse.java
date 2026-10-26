@@ -5,19 +5,23 @@ import java.util.List;
 import java.util.UUID;
 
 import com.civsetu.common.domain.Priority;
-import com.civsetu.media.dto.MediaResponse;
 import com.civsetu.issue.entity.IssueStatus;
 import com.civsetu.issue.entity.PrioritySource;
+import com.civsetu.media.dto.MediaResponse;
 
 /**
  * Full view of one issue. Fields depend on who asks:
  * <ul>
- *   <li>everyone: the public fields</li>
+ *   <li>everyone: the public fields, including why the system chose the priority</li>
  *   <li>the reporter: also {@code reportedByMe = true} and {@code reporter}</li>
- *   <li>Admin, or an Authority of the issue's department: also {@code reporter} and
- *       {@code assignedAuthorityId}</li>
+ *   <li>Admin, or an Authority of the issue's department: also {@code reporter},
+ *       {@code assignedAuthorityId} and {@code flaggedForReview}</li>
  * </ul>
  * Fields the caller may not see are null.
+ *
+ * @param version        send this back with any workflow action; it detects stale views
+ * @param priorityReason the latest routing decision's explanation (AI or rules)
+ * @param media          attached files the caller may see (photos are public; voice notes are private)
  */
 public record IssueDetailResponse(
         UUID id,
@@ -30,6 +34,7 @@ public record IssueDetailResponse(
         IssueStatus status,
         Priority priority,
         PrioritySource prioritySource,
+        String priorityReason,
         String address,
         double latitude,
         double longitude,
@@ -37,11 +42,14 @@ public record IssueDetailResponse(
         Instant updatedAt,
         Instant slaDueAt,
         Instant resolvedAt,
+        Instant closedAt,
+        int reopenCount,
         UUID duplicateOfId,
+        long version,
         boolean reportedByMe,
         Reporter reporter,
         UUID assignedAuthorityId,
-        /* Attached files the caller may see (photos are public; voice notes are private) */
+        Boolean flaggedForReview,
         List<MediaResponse> media) {
 
     /** Contact details of the person who reported the issue. Private. */

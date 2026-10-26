@@ -1,5 +1,6 @@
 package com.civsetu.user.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,4 +20,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByRole(Role role);
 
     Page<User> findByRole(Role role, Pageable pageable);
+
+    List<User> findByRoleAndDepartmentIdAndActiveTrueOrderByIdAsc(Role role, UUID departmentId);
 }

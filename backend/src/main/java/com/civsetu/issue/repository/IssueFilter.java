@@ -20,6 +20,7 @@ public record IssueFilter(
         Instant createdTo,
         String text,
         UUID reporterId,
+        UUID assignedAuthorityId,
         Double minLongitude,
         Double minLatitude,
         Double maxLongitude,

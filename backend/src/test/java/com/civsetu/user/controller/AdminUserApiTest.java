@@ -131,7 +131,8 @@ class AdminUserApiTest extends ApiTest {
 
     @Test
     void bootstrapAdminIsCreatedOnlyWhenNoAdminExists() throws Exception {
-        jdbc.update("DELETE FROM users WHERE role = 'ADMIN'");
+        // Simulate a fresh installation: demote existing Admins (people with audit history cannot be deleted)
+        jdbc.update("UPDATE users SET role = 'CITIZEN' WHERE role = 'ADMIN'");
         String email = uniqueEmail("first-admin");
 
         assertThat(users.ensureBootstrapAdmin("First Admin", email, PASSWORD)).isTrue();

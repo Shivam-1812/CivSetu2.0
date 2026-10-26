@@ -17,7 +17,8 @@ import com.civsetu.common.persistence.BaseEntity;
 
 /**
  * A reported civic issue. Related users, categories and departments are referenced by id only,
- * so each feature owns its own tables.
+ * so each feature owns its own tables. Status only changes through the named methods below,
+ * which the workflow service calls after checking the transition rules.
  */
 @Entity
 @Table(name = "issues")
@@ -65,8 +66,18 @@ public class Issue extends BaseEntity {
     @Column(name = "resolved_at")
     private Instant resolvedAt;
 
+    @Column(name = "closed_at")
+    private Instant closedAt;
+
     @Column(name = "duplicate_of_id")
     private UUID duplicateOfId;
+
+    @Column(name = "reopen_count", nullable = false)
+    private int reopenCount;
+
+    // Set when the AI thinks the report may be invalid; Authorities see it, nothing is auto-rejected
+    @Column(name = "flagged_for_review", nullable = false)
+    private boolean flaggedForReview;
 
     @Version
     private long version;
@@ -74,7 +85,10 @@ public class Issue extends BaseEntity {
     protected Issue() {
     }
 
-    /** A new report: status REPORTED, routed to the category's department. */
+    /**
+     * A new report: status REPORTED. Department, priority and deadline are provisional values from
+     * the category until triage decides.
+     */
     public Issue(UUID reporterId, String title, String description, UUID categoryId, UUID departmentId,
             Priority priority, PrioritySource prioritySource, Point location, String address, Instant slaDueAt) {
         this.reporterId = reporterId;
@@ -87,6 +101,55 @@ public class Issue extends BaseEntity {
         this.location = location;
         this.address = address;
         this.slaDueAt = slaDueAt;
+    }
+
+    /** Triage result: where the issue goes and how urgent it is. Status becomes ASSIGNED. */
+    public void route(UUID categoryId, UUID departmentId, Priority priority, PrioritySource source,
+            boolean flaggedForReview, Instant slaDueAt, UUID authorityId) {
+        this.categoryId = categoryId;
+        this.departmentId = departmentId;
+        this.priority = priority;
+        this.prioritySource = source;
+        this.flaggedForReview = flaggedForReview;
+        this.slaDueAt = slaDueAt;
+        this.assignedAuthorityId = authorityId;
+        this.status = IssueStatus.ASSIGNED;
+    }
+
+    /** Automatic hand-over to another Authority of the same department. Status is unchanged. */
+    public void reassign(UUID authorityId) {
+        this.assignedAuthorityId = authorityId;
+    }
+
+    public void startWork() {
+        this.status = IssueStatus.IN_PROGRESS;
+    }
+
+    public void resolve(Instant at) {
+        this.status = IssueStatus.RESOLVED;
+        this.resolvedAt = at;
+        this.closedAt = at;
+    }
+
+    public void reject(Instant at) {
+        this.status = IssueStatus.REJECTED;
+        this.closedAt = at;
+    }
+
+    /** The department says it is not theirs: back to REPORTED for re-routing. The deadline is kept. */
+    public void returnForRerouting() {
+        this.status = IssueStatus.REPORTED;
+        this.assignedAuthorityId = null;
+    }
+
+    /** The reporter is not satisfied: open again with a fresh deadline. */
+    public void reopen(Instant newDeadline, UUID authorityId) {
+        this.status = IssueStatus.ASSIGNED;
+        this.resolvedAt = null;
+        this.closedAt = null;
+        this.slaDueAt = newDeadline;
+        this.assignedAuthorityId = authorityId;
+        this.reopenCount++;
     }
 
     public UUID getReporterId() {
@@ -145,8 +208,20 @@ public class Issue extends BaseEntity {
         return resolvedAt;
     }
 
+    public Instant getClosedAt() {
+        return closedAt;
+    }
+
     public UUID getDuplicateOfId() {
         return duplicateOfId;
+    }
+
+    public int getReopenCount() {
+        return reopenCount;
+    }
+
+    public boolean isFlaggedForReview() {
+        return flaggedForReview;
     }
 
     public long getVersion() {

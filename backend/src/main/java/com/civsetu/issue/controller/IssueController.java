@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,6 +29,7 @@ import com.civsetu.issue.dto.IssueDetailResponse;
 import com.civsetu.issue.dto.IssueSearchParams;
 import com.civsetu.issue.dto.IssueSummaryResponse;
 import com.civsetu.issue.dto.MapResponse;
+import com.civsetu.issue.entity.IssueStatus;
 import com.civsetu.issue.service.IssueService;
 
 /**
@@ -76,6 +78,14 @@ class IssueController {
     @GetMapping("/map")
     MapResponse map(@Valid IssueSearchParams params) {
         return issues.map(params);
+    }
+
+    /** Authorities: the open issues the system assigned to the caller (optionally filtered by status). */
+    @GetMapping("/assigned")
+    @PreAuthorize("hasRole('AUTHORITY')")
+    PageResponse<IssueSummaryResponse> assigned(@AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) List<IssueStatus> status, Pageable pageable) {
+        return issues.assignedTo(Caller.from(jwt), status, pageable);
     }
 
     /** The caller's own reports. */

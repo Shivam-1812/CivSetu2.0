@@ -57,8 +57,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login",
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         // Public transparency: anyone may browse issues and reference data
-                        .requestMatchers(HttpMethod.GET, "/api/v1/issues/mine").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/issues/mine", "/api/v1/issues/assigned")
+                        .authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/issues", "/api/v1/issues/map", "/api/v1/issues/*",
+                                "/api/v1/issues/*/history",
                                 "/api/v1/categories", "/api/v1/departments").permitAll()
                         // Files: public photos need no token; MediaService checks access per file
                         .requestMatchers(HttpMethod.GET, "/api/v1/media/*").permitAll()

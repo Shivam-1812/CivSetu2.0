@@ -43,7 +43,9 @@ class IssueApiTest extends ApiTest {
 
         mvc.perform(get("/api/v1/issues/" + id).header(HttpHeaders.AUTHORIZATION, bearer(citizen.accessToken())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("REPORTED"))
+                // Routed automatically right after the report was saved
+                .andExpect(jsonPath("$.status").value("ASSIGNED"))
+                .andExpect(jsonPath("$.priorityReason").value("Category 'Pothole or damaged road' is medium priority."))
                 .andExpect(jsonPath("$.categoryCode").value("POTHOLE"))
                 .andExpect(jsonPath("$.departmentName").value("Roads and Infrastructure"))
                 .andExpect(jsonPath("$.priority").value("MEDIUM"))

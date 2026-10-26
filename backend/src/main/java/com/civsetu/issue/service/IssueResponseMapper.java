@@ -17,6 +17,8 @@ import com.civsetu.issue.dto.MapResponse;
 import com.civsetu.issue.entity.Issue;
 import com.civsetu.media.dto.MediaResponse;
 import com.civsetu.media.service.MediaService;
+import com.civsetu.triage.dto.TriageDecisionResponse;
+import com.civsetu.triage.service.TriageService;
 import com.civsetu.user.service.UserService;
 
 /**
@@ -30,13 +32,15 @@ class IssueResponseMapper {
     private final DepartmentService departments;
     private final UserService users;
     private final MediaService media;
+    private final TriageService triage;
 
     IssueResponseMapper(CategoryService categories, DepartmentService departments, UserService users,
-            MediaService media) {
+            MediaService media, TriageService triage) {
         this.categories = categories;
         this.departments = departments;
         this.users = users;
         this.media = media;
+        this.triage = triage;
     }
 
     /** Category and department names, loaded once per request (both tables are small). */
@@ -72,15 +76,21 @@ class IssueResponseMapper {
                         .map(user -> new IssueDetailResponse.Reporter(user.id(), user.name(), user.email(), user.phone()))
                         .orElse(null)
                 : null;
+        // Files attached to the report itself; files of workflow steps are listed in the history
         List<MediaResponse> visibleMedia = media.listForIssue(issue.getId()).stream()
+                .filter(file -> file.updateId() == null)
                 .filter(file -> IssueMediaAccess.canView(issue, file.kind(), caller))
                 .toList();
+        String priorityReason = triage.latest(issue.getId()).map(TriageDecisionResponse::reason).orElse(null);
 
         return new IssueDetailResponse(issue.getId(), issue.getTitle(), issue.getDescription(), category.code(),
                 category.label(), department.id(), department.name(), issue.getStatus(), issue.getPriority(),
-                issue.getPrioritySource(), issue.getAddress(), issue.getLatitude(), issue.getLongitude(),
-                issue.getCreatedAt(), issue.getUpdatedAt(), issue.getSlaDueAt(), issue.getResolvedAt(),
-                issue.getDuplicateOfId(), isReporter, reporter,
-                isStaff ? issue.getAssignedAuthorityId() : null, visibleMedia);
+                issue.getPrioritySource(), priorityReason, issue.getAddress(), issue.getLatitude(),
+                issue.getLongitude(), issue.getCreatedAt(), issue.getUpdatedAt(), issue.getSlaDueAt(),
+                issue.getResolvedAt(), issue.getClosedAt(), issue.getReopenCount(), issue.getDuplicateOfId(),
+                issue.getVersion(), isReporter, reporter,
+                isStaff ? issue.getAssignedAuthorityId() : null,
+                isStaff ? issue.isFlaggedForReview() : null,
+                visibleMedia);
     }
 }

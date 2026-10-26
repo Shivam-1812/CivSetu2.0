@@ -1,5 +1,6 @@
 package com.civsetu.user.service;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,7 +15,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.civsetu.audit.service.AuditService;
 import com.civsetu.common.error.ApiException;
+import com.civsetu.common.security.Caller;
 import com.civsetu.common.web.PageResponse;
 import com.civsetu.department.service.DepartmentService;
 import com.civsetu.user.dto.CreateStaffRequest;
@@ -35,13 +38,16 @@ public class UserService {
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final DepartmentService departments;
+    private final AuditService audit;
     // Checked against when the email is unknown, so both failure paths take the same time
     private final String timingDummyHash;
 
-    UserService(UserRepository users, PasswordEncoder passwordEncoder, DepartmentService departments) {
+    UserService(UserRepository users, PasswordEncoder passwordEncoder, DepartmentService departments,
+            AuditService audit) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.departments = departments;
+        this.audit = audit;
         this.timingDummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -53,7 +59,7 @@ public class UserService {
 
     /** Admin-created Authority or Admin account. */
     @Transactional
-    public UserResponse createStaff(CreateStaffRequest request) {
+    public UserResponse createStaff(Caller admin, CreateStaffRequest request) {
         UUID departmentId = request.departmentId();
         switch (request.role()) {
             case CITIZEN -> throw badRequest("ROLE_NOT_ALLOWED",
@@ -72,8 +78,11 @@ public class UserService {
                 }
             }
         }
-        return UserResponse.from(create(request.name(), request.email(), request.password(), request.phone(),
-                request.role(), departmentId));
+        UserResponse created = UserResponse.from(create(request.name(), request.email(), request.password(),
+                request.phone(), request.role(), departmentId));
+        audit.record(admin, "USER_CREATED", "USER", created.id(),
+                "role=" + created.role() + (departmentId == null ? "" : ", department=" + departmentId));
+        return created;
     }
 
     /** Checks email and password; the same error is returned for an unknown email and a wrong password. */
@@ -130,6 +139,13 @@ public class UserService {
         return PageResponse.of(result, UserResponse::from);
     }
 
+    /** Active Authorities of a department, in a stable order (used for automatic assignment). */
+    public List<UUID> activeAuthorityIds(UUID departmentId) {
+        return users.findByRoleAndDepartmentIdAndActiveTrueOrderByIdAsc(Role.AUTHORITY, departmentId).stream()
+                .map(User::getId)
+                .toList();
+    }
+
     public boolean hasAdmin() {
         return users.existsByRole(Role.ADMIN);
     }
@@ -140,7 +156,8 @@ public class UserService {
         if (users.existsByRole(Role.ADMIN)) {
             return false;
         }
-        create(name, email, rawPassword, null, Role.ADMIN, null);
+        User admin = create(name, email, rawPassword, null, Role.ADMIN, null);
+        audit.recordSystem("BOOTSTRAP_ADMIN_CREATED", "USER", admin.getId(), null);
         return true;
     }
 

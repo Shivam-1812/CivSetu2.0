@@ -49,6 +49,9 @@ public final class IssueSpecifications {
             if (filter.reporterId() != null) {
                 predicates.add(cb.equal(root.get("reporterId"), filter.reporterId()));
             }
+            if (filter.assignedAuthorityId() != null) {
+                predicates.add(cb.equal(root.get("assignedAuthorityId"), filter.assignedAuthorityId()));
+            }
             if (filter.text() != null && !filter.text().isBlank()) {
                 String pattern = "%" + escapeLike(filter.text().trim().toLowerCase(Locale.ROOT)) + "%";
                 predicates.add(cb.or(

@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.civsetu.common.error.ApiException;
 import com.civsetu.common.security.Caller;
 import com.civsetu.media.config.MediaProperties;
+import com.civsetu.media.dto.MediaBytes;
 import com.civsetu.media.dto.MediaContent;
 import com.civsetu.media.dto.MediaResponse;
 import com.civsetu.media.entity.IssueMedia;
@@ -59,6 +60,13 @@ public class MediaService {
      */
     @Transactional
     public List<MediaResponse> attach(UUID issueId, UUID uploaderId, MediaKind kind, List<MultipartFile> files) {
+        return attach(issueId, null, uploaderId, kind, files);
+    }
+
+    /** As {@link #attach(UUID, UUID, MediaKind, List)}, linking the files to a workflow step. */
+    @Transactional
+    public List<MediaResponse> attach(UUID issueId, UUID updateId, UUID uploaderId, MediaKind kind,
+            List<MultipartFile> files) {
         List<MultipartFile> uploads = files == null ? List.of()
                 : files.stream().filter(file -> file != null && !file.isEmpty()).toList();
         if (uploads.isEmpty()) {
@@ -73,13 +81,27 @@ public class MediaService {
 
         List<MediaResponse> stored = new ArrayList<>();
         for (int i = 0; i < uploads.size(); i++) {
-            stored.add(store(issueId, uploaderId, kind, uploads.get(i), types.get(i)));
+            stored.add(store(issueId, updateId, uploaderId, kind, uploads.get(i), types.get(i)));
         }
         return stored;
     }
 
     public List<MediaResponse> listForIssue(UUID issueId) {
         return media.findByIssueIdOrderByCreatedAtAsc(issueId).stream().map(MediaResponse::from).toList();
+    }
+
+    /** The first report photos of an issue, for automatic analysis (no access check: system use only). */
+    public List<MediaBytes> readReportImages(UUID issueId, int limit) {
+        return media.findByIssueIdAndKindOrderByCreatedAtAsc(issueId, MediaKind.IMAGE).stream()
+                .limit(limit)
+                .map(file -> {
+                    try (InputStream in = storage.open(file.getStorageKey())) {
+                        return new MediaBytes(file.getContentType(), in.readAllBytes());
+                    } catch (IOException e) {
+                        throw new UncheckedIOException("Could not read " + file.getStorageKey(), e);
+                    }
+                })
+                .toList();
     }
 
     /** Opens a file for download after checking that the caller may see it. */
@@ -107,7 +129,8 @@ public class MediaService {
                         "This file type is not accepted here. Allowed: " + describe(allowed) + "."));
     }
 
-    private MediaResponse store(UUID issueId, UUID uploaderId, MediaKind kind, MultipartFile file, FileType type) {
+    private MediaResponse store(UUID issueId, UUID updateId, UUID uploaderId, MediaKind kind, MultipartFile file,
+            FileType type) {
         byte[] bytes;
         try {
             bytes = file.getBytes();
@@ -122,7 +145,7 @@ public class MediaService {
         String key = "issues/" + issueId + "/" + UUID.randomUUID() + "." + type.extension();
         storage.put(key, bytes, type.contentType());
         deleteIfRolledBack(key);
-        IssueMedia saved = media.save(new IssueMedia(issueId, uploaderId, kind, key, type.contentType(),
+        IssueMedia saved = media.save(new IssueMedia(issueId, updateId, uploaderId, kind, key, type.contentType(),
                 bytes.length));
         return MediaResponse.from(saved);
     }

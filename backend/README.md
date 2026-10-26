@@ -53,12 +53,14 @@ src/main/java/com/civsetu/
 │   ├── validation/              shared validation patterns
 │   └── web/                     PageResponse
 ├── config/                      app-wide Spring config: security, CORS, OpenAPI, clock
+├── audit/                       read-only log of Admin actions and system decisions
 ├── auth/                        register, login, refresh tokens, JWT
 ├── user/                        accounts, roles, admin user management
 ├── department/                  departments and categories (category → department routing)
-├── issue/                       reporting, search, map, visibility rules, demo data
+├── issue/                       reporting, search, map, workflow (plan/resolve/reject/return/reopen), history
 ├── media/                       photo/voice uploads, EXIF stripping, storage (local disk or S3/R2)
-└── sla/                         resolution deadlines per priority
+├── sla/                         resolution deadlines per priority
+└── triage/                      automatic routing: AI advisor (Gemini) with rule-engine fallback
 
 src/main/resources/
 ├── application.yml              shared settings; application-dev.yml / application-prod.yml per profile
@@ -119,6 +121,13 @@ Secrets and URLs come from environment variables; locally they are read from `ba
 - Public without a token: issue list, map and detail, categories, departments. Reporter contact
   details are shown only to the reporter, Admins, and Authorities of the issue's department.
 - Locations are WGS 84 `latitude`/`longitude`; map viewports are `bbox=minLng,minLat,maxLng,maxLat`.
+- **No one routes issues by hand.** After a report is saved, triage (AI if `CIVSETU_GEMINI_API_KEY` is set,
+  otherwise rules) picks department, category and priority; the system sets the deadline and assigns the
+  least-loaded active Authority. Admins have no endpoint to assign, prioritise or reschedule an issue.
+- Workflow: the assigned Authority plans (`ASSIGNED → IN_PROGRESS`), resolves with proof photos or rejects
+  with a reason, or returns a misrouted issue for automatic re-routing; the reporter may reopen. Each request
+  carries the issue `version` from the last read; a stale version gets 409 `STALE_ISSUE`.
+- `GET /api/v1/issues/{id}/history` is the public, append-only timeline of every step.
 - Uploads: `POST /api/v1/issues` as `multipart/form-data` with parts `data` (JSON, Content-Type
   `application/json`), `images` (up to 5 JPEG/PNG/WebP, 10 MB each) and `voice` (one WebM/Ogg/MP4/MP3/WAV).
   Types are checked by file content; photos are re-encoded, which removes EXIF data such as GPS.

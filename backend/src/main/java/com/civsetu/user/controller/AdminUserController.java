@@ -5,6 +5,8 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.civsetu.common.security.Caller;
 import com.civsetu.common.web.PageResponse;
 import com.civsetu.user.dto.CreateStaffRequest;
 import com.civsetu.user.dto.UserResponse;
@@ -32,8 +35,8 @@ class AdminUserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    UserResponse create(@Valid @RequestBody CreateStaffRequest request) {
-        return users.createStaff(request);
+    UserResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateStaffRequest request) {
+        return users.createStaff(Caller.from(jwt), request);
     }
 
     @GetMapping

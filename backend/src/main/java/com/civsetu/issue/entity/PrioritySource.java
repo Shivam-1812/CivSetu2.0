@@ -1,10 +1,9 @@
 package com.civsetu.issue.entity;
 
 /**
- * Who decided an issue's priority: the category rules, the optional AI advisor, or an Admin.
+ * What decided an issue's priority: the AI advisor or the rule engine. No person can set it.
  */
 public enum PrioritySource {
     RULE,
-    AI,
-    ADMIN
+    AI
 }

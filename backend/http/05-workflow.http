@@ -1,0 +1,95 @@
+### 1. Citizen reports an issue (keeps the citizen token)
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "name": "Asha Patil",
+  "email": "asha.{{$random.alphanumeric(6)}}@example.test",
+  "password": "citizen-pass-123"
+}
+
+> {% client.global.set("citizenToken", response.body.accessToken); %}
+
+###
+POST {{host}}/api/v1/issues
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{
+  "title": "Electric pole sparking near school",
+  "description": "The pole outside the school gate has been sparking since morning.",
+  "category": "STREETLIGHT",
+  "latitude": 18.5204,
+  "longitude": 73.8567,
+  "address": "Shivaji Nagar, Pune"
+}
+
+> {% client.global.set("issueId", response.body.id); %}
+
+### 2. A moment later the system has routed it: status ASSIGNED, priority and reason set
+GET {{host}}/api/v1/issues/{{issueId}}
+
+> {% client.global.set("version", response.body.version); %}
+
+### Public timeline of every step
+GET {{host}}/api/v1/issues/{{issueId}}/history
+
+### 3. As the assigned Authority (log in first, keep the token as authorityToken): my queue
+GET {{host}}/api/v1/issues/assigned
+Authorization: Bearer {{authorityToken}}
+
+### Plan the work (multipart: data part + optional documents)
+POST {{host}}/api/v1/issues/{{issueId}}/plan
+Authorization: Bearer {{authorityToken}}
+Content-Type: multipart/form-data; boundary=CivSetuBoundary
+
+--CivSetuBoundary
+Content-Disposition: form-data; name="data"
+Content-Type: application/json
+
+{
+  "version": {{version}},
+  "actionTaken": "Electrician team sent to isolate and repair the pole",
+  "staffAllocated": "2 electricians",
+  "resourcesUsed": "Insulation kit, ladder truck"
+}
+--CivSetuBoundary--
+
+> {% client.global.set("version", response.body.version); %}
+
+### Resolve with a proof photo (put a JPEG named proof.jpg next to this file)
+POST {{host}}/api/v1/issues/{{issueId}}/resolve
+Authorization: Bearer {{authorityToken}}
+Content-Type: multipart/form-data; boundary=CivSetuBoundary
+
+--CivSetuBoundary
+Content-Disposition: form-data; name="data"
+Content-Type: application/json
+
+{ "version": {{version}}, "remarks": "Wiring replaced and pole made safe." }
+--CivSetuBoundary
+Content-Disposition: form-data; name="proofs"; filename="proof.jpg"
+Content-Type: image/jpeg
+
+< ./proof.jpg
+--CivSetuBoundary--
+
+> {% client.global.set("version", response.body.version); %}
+
+### Not our department? Return it; the system re-routes it elsewhere
+POST {{host}}/api/v1/issues/{{issueId}}/return
+Authorization: Bearer {{authorityToken}}
+Content-Type: application/json
+
+{ "version": {{version}}, "reason": "This is a private transformer, not a municipal streetlight." }
+
+### 4. The reporter reopens if not satisfied
+POST {{host}}/api/v1/issues/{{issueId}}/reopen
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{ "version": {{version}}, "reason": "The pole started sparking again this evening." }
+
+### Admin: audit log of this issue (read-only)
+GET {{host}}/api/v1/admin/audit?entityType=ISSUE&entityId={{issueId}}
+Authorization: Bearer {{token}}

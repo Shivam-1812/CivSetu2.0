@@ -20,6 +20,10 @@ public class IssueMedia extends BaseEntity {
     @Column(name = "issue_id", nullable = false, updatable = false)
     private UUID issueId;
 
+    // The workflow step (plan, resolution, rejection) this file belongs to; null for report files
+    @Column(name = "update_id", updatable = false)
+    private UUID updateId;
+
     @Column(name = "uploaded_by", nullable = false, updatable = false)
     private UUID uploadedBy;
 
@@ -39,9 +43,10 @@ public class IssueMedia extends BaseEntity {
     protected IssueMedia() {
     }
 
-    public IssueMedia(UUID issueId, UUID uploadedBy, MediaKind kind, String storageKey, String contentType,
-            long sizeBytes) {
+    public IssueMedia(UUID issueId, UUID updateId, UUID uploadedBy, MediaKind kind, String storageKey,
+            String contentType, long sizeBytes) {
         this.issueId = issueId;
+        this.updateId = updateId;
         this.uploadedBy = uploadedBy;
         this.kind = kind;
         this.storageKey = storageKey;
@@ -51,6 +56,10 @@ public class IssueMedia extends BaseEntity {
 
     public UUID getIssueId() {
         return issueId;
+    }
+
+    public UUID getUpdateId() {
+        return updateId;
     }
 
     public UUID getUploadedBy() {
