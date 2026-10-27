@@ -128,8 +128,8 @@ Secrets and URLs come from environment variables; locally they are read from `ba
 - Locations are WGS 84 `latitude`/`longitude`; map viewports are `bbox=minLng,minLat,maxLng,maxLat`.
 - **No one routes issues by hand.** After a report is saved, triage (AI if `CIVSETU_GEMINI_API_KEY` is set,
   otherwise rules) picks department, category and priority; the system sets the deadline and assigns the
-  least-loaded active Authority. Admins have no endpoint to assign, prioritise or reschedule an issue.
-- Workflow: the assigned Authority plans (`ASSIGNED → IN_PROGRESS`), resolves with proof photos or rejects
+  least-loaded active Authority as the lead. Admins have no endpoint to assign, prioritise or reschedule an issue.
+- Workflow: any Authority of the issue's department (not only the lead) plans (`ASSIGNED → IN_PROGRESS`), resolves with proof photos or rejects
   with a reason, or returns a misrouted issue for automatic re-routing; the reporter may reopen. Each request
   carries the issue `version` from the last read; a stale version gets 409 `STALE_ISSUE`.
 - `GET /api/v1/issues/{id}/history` is the public, append-only timeline of every step.
@@ -137,7 +137,10 @@ Secrets and URLs come from environment variables; locally they are read from `ba
   person per issue). When net agree votes reach `civsetu.engagement.escalation-votes` (default 10) the
   system raises an open issue's priority one level, once, and records it in the history.
 - Duplicates: `GET /api/v1/issues/similar?latitude=&longitude=&category=&title=` before reporting, and
-  `GET /api/v1/issues/{id}/similar`; the assigned Authority can close an issue as a duplicate.
+  `GET /api/v1/issues/{id}/similar`; an Authority of the department can close an issue as a duplicate.
+- Issue lists (`GET /api/v1/issues`, `/mine`, `/assigned`) return feed cards: description, cover photo,
+  photo count, voice-note flag, agree/disagree and comment counts, and the viewer's own vote.
+  `overdue=true` keeps only open issues past their deadline.
 - SLA: every issue shows `slaState`. Every 15 minutes the system alerts each newly breached issue
   exactly once (reporter, Authority, Admins), recorded in the history. Targets are fixed, not editable.
 - Surveys: Authorities (own department) and Admins find clusters (`GET /api/v1/surveys/clusters`) and

@@ -2,6 +2,8 @@ package com.civsetu.issue.service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -13,12 +15,14 @@ import com.civsetu.department.dto.CategoryResponse;
 import com.civsetu.department.dto.DepartmentResponse;
 import com.civsetu.department.service.CategoryService;
 import com.civsetu.department.service.DepartmentService;
+import com.civsetu.engagement.dto.EngagementSummary;
 import com.civsetu.engagement.service.EngagementService;
 import com.civsetu.issue.dto.IssueDetailResponse;
 import com.civsetu.issue.dto.IssueSummaryResponse;
 import com.civsetu.issue.dto.MapResponse;
 import com.civsetu.issue.dto.SimilarIssueResponse;
 import com.civsetu.issue.entity.Issue;
+import com.civsetu.media.dto.MediaOverview;
 import com.civsetu.media.dto.MediaResponse;
 import com.civsetu.media.service.MediaService;
 import com.civsetu.sla.dto.SlaRules;
@@ -69,13 +73,28 @@ class IssueResponseMapper {
         return new Labels(categories.lookup(), departments.lookup(), sla.rules(), clock.instant());
     }
 
-    IssueSummaryResponse summary(Issue issue, Labels labels) {
+    /** List rows for these issues, keyed by id; files and community counts are loaded in batches. */
+    Map<UUID, IssueSummaryResponse> summaries(Collection<Issue> found, Caller viewer) {
+        Labels labels = labels();
+        List<UUID> ids = found.stream().map(Issue::getId).toList();
+        Map<UUID, MediaOverview> files = media.overview(ids);
+        Map<UUID, EngagementSummary> activity = engagement.summaries(ids, viewer);
+        Map<UUID, IssueSummaryResponse> result = new HashMap<>();
+        for (Issue issue : found) {
+            result.put(issue.getId(), summary(issue, labels, files.getOrDefault(issue.getId(), MediaOverview.NONE),
+                    activity.getOrDefault(issue.getId(), EngagementSummary.NONE)));
+        }
+        return result;
+    }
+
+    private IssueSummaryResponse summary(Issue issue, Labels labels, MediaOverview files, EngagementSummary activity) {
         CategoryResponse category = labels.categories().get(issue.getCategoryId());
         DepartmentResponse department = labels.departments().get(issue.getDepartmentId());
-        return new IssueSummaryResponse(issue.getId(), issue.getTitle(), category.code(), category.label(),
-                department.id(), department.name(), issue.getStatus(), issue.getPriority(), issue.getAddress(),
-                issue.getLatitude(), issue.getLongitude(), issue.getCreatedAt(), issue.getSlaDueAt(),
-                labels.slaState(issue));
+        return new IssueSummaryResponse(issue.getId(), issue.getTitle(), issue.getDescription(), category.code(),
+                category.label(), department.id(), department.name(), issue.getStatus(), issue.getPriority(),
+                issue.getAddress(), issue.getLatitude(), issue.getLongitude(), issue.getCreatedAt(),
+                issue.getSlaDueAt(), labels.slaState(issue), files.coverImageUrl(), files.imageCount(),
+                files.hasVoice(), activity.agree(), activity.disagree(), activity.comments(), activity.myVote());
     }
 
     MapResponse.Point mapPoint(Issue issue, Labels labels) {

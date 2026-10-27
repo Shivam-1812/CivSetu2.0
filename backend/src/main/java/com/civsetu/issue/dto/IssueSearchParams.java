@@ -22,6 +22,7 @@ import com.civsetu.issue.entity.IssueStatus;
  * @param to         created before
  * @param q          text to find in title or description
  * @param bbox       visible map area {@code minLng,minLat,maxLng,maxLat}
+ * @param overdue    true: only open issues past their deadline
  */
 public record IssueSearchParams(
         List<IssueStatus> status,
@@ -31,5 +32,6 @@ public record IssueSearchParams(
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
         @Size(max = 100) String q,
-        String bbox) {
+        String bbox,
+        Boolean overdue) {
 }

@@ -86,7 +86,7 @@ public class SurveyService {
         }
         List<SurveyQuestion> questions = new ArrayList<>();
         for (int i = 0; i < request.questions().size(); i++) {
-            CreateSurveyRequest.Question question = request.questions().get(i);
+            CreateSurveyRequest.NewQuestion question = request.questions().get(i);
             questions.add(new SurveyQuestion(i + 1, question.text().trim(), question.type()));
         }
         Survey survey = surveys.save(new Survey(request.title().trim(), trim(request.description()), staff.id(),
@@ -97,6 +97,13 @@ public class SurveyService {
         audit.record(staff, "SURVEY_CREATED", "SURVEY", survey.getId(), "invited=" + invited.size());
         events.publishEvent(new SurveyCreatedEvent(survey.getId(), survey.getTitle(), survey.getClosesAt(), invited));
         return detail(survey, staff);
+    }
+
+    /** Surveys the caller manages, newest first: an Authority its own, an Admin all. */
+    public List<SurveyDetailResponse> managed(Caller staff) {
+        List<Survey> found = staff.isAdmin() ? surveys.findAllByOrderByCreatedAtDesc()
+                : surveys.findByCreatedByOrderByCreatedAtDesc(staff.id());
+        return found.stream().map(survey -> detail(survey, staff)).toList();
     }
 
     /** Surveys the citizen is invited to, newest first. */
@@ -232,8 +239,8 @@ public class SurveyService {
     }
 
     private SurveyDetailResponse detail(Survey survey, Caller viewer) {
-        List<SurveyDetailResponse.Question> questions = survey.getQuestions().stream()
-                .map(q -> new SurveyDetailResponse.Question(q.getId(), q.getPosition(), q.getText(), q.getType()))
+        List<SurveyDetailResponse.QuestionItem> questions = survey.getQuestions().stream()
+                .map(q -> new SurveyDetailResponse.QuestionItem(q.getId(), q.getPosition(), q.getText(), q.getType()))
                 .toList();
         boolean answered = !viewer.isAnonymous() && submissions.existsBySurveyIdAndUserId(survey.getId(), viewer.id());
         return new SurveyDetailResponse(survey.getId(), survey.getTitle(), survey.getDescription(), survey.getStatus(),

@@ -64,6 +64,30 @@ class EngagementApiTest extends ApiTest {
     }
 
     @Test
+    void listRowsCarryCountsAndTheViewersOwnVote() throws Exception {
+        String title = "Feed card " + UUID.randomUUID().toString().substring(0, 8);
+        String id = reportIssue(registerCitizen(uniqueEmail("feed")), title, "GARBAGE", 18.5, 73.8);
+        Session neighbour = registerCitizen(uniqueEmail("liker"));
+        vote(id, neighbour, "AGREE");
+        comment(id, neighbour, "Seen it too");
+
+        mvc.perform(get("/api/v1/issues").param("q", title)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(neighbour.accessToken())))
+                .andExpect(jsonPath("$.content[0].id").value(id))
+                .andExpect(jsonPath("$.content[0].description").isNotEmpty())
+                .andExpect(jsonPath("$.content[0].agreeCount").value(1))
+                .andExpect(jsonPath("$.content[0].disagreeCount").value(0))
+                .andExpect(jsonPath("$.content[0].commentCount").value(1))
+                .andExpect(jsonPath("$.content[0].myVote").value("AGREE"))
+                .andExpect(jsonPath("$.content[0].imageCount").value(0))
+                .andExpect(jsonPath("$.content[0].coverImageUrl").doesNotExist());
+        // Anonymous viewers get the same counts without a vote of their own
+        mvc.perform(get("/api/v1/issues").param("q", title))
+                .andExpect(jsonPath("$.content[0].agreeCount").value(1))
+                .andExpect(jsonPath("$.content[0].myVote").doesNotExist());
+    }
+
+    @Test
     void onlyOtherCitizensCanVote() throws Exception {
         Session reporter = registerCitizen(uniqueEmail("self"));
         String id = reportIssue(reporter, "Broken bench", "PARK_MAINTENANCE", 18.5, 73.8);

@@ -18,6 +18,24 @@ import com.civsetu.support.ApiTest;
 class IssueSearchApiTest extends ApiTest {
 
     @Test
+    void overdueFilterKeepsOnlyOpenIssuesPastTheirDeadline() throws Exception {
+        Session citizen = registerCitizen(uniqueEmail("overdue"));
+        Region here = uniqueRegion();
+        String late = reportIssue(citizen, "Late one", "GARBAGE", here.lat(1), here.lng(1));
+        String closedLate = reportIssue(citizen, "Closed late one", "GARBAGE", here.lat(2), here.lng(2));
+        reportIssue(citizen, "On time", "GARBAGE", here.lat(3), here.lng(3));
+        jdbc.update("UPDATE issues SET sla_due_at = now() - interval '2 hours' WHERE id IN (?, ?)",
+                UUID.fromString(late), UUID.fromString(closedLate));
+        jdbc.update("UPDATE issues SET status = 'REJECTED', closed_at = now() WHERE id = ?", UUID.fromString(closedLate));
+
+        mvc.perform(get("/api/v1/issues").param("bbox", here.bbox()).param("overdue", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(late))
+                .andExpect(jsonPath("$.content[0].slaState").value("BREACHED"));
+    }
+
+    @Test
     void boundingBoxReturnsOnlyIssuesInsideIt() throws Exception {
         Session citizen = registerCitizen(uniqueEmail("bbox"));
         Region here = uniqueRegion();

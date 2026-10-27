@@ -1,0 +1,348 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap");
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* CivSetu Brand Colors - Trustworthy Civic Blues */
+    --background: 210 40% 98%;
+    --foreground: 215 35% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 35% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 35% 15%;
+
+    /* Primary - Deep Civic Blue */
+    --primary: 217 91% 35%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 91% 28%;
+
+    /* Secondary - Soft Teal */
+    --secondary: 174 62% 47%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Accent - Warm Amber for CTAs */
+    --accent: 38 92% 50%;
+    --accent-foreground: 215 35% 15%;
+
+    --muted: 210 30% 94%;
+    --muted-foreground: 215 20% 45%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Status Colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 215 35% 15%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 35%;
+
+    --radius: 0.75rem;
+
+    /* Custom Gradients */
+    --gradient-hero: linear-gradient(
+      135deg,
+      hsl(217, 91%, 35%) 0%,
+      hsl(199, 89%, 48%) 50%,
+      hsl(174, 62%, 47%) 100%
+    );
+    --gradient-card: linear-gradient(
+      180deg,
+      hsl(0, 0%, 100%) 0%,
+      hsl(210, 40%, 98%) 100%
+    );
+    --gradient-accent: linear-gradient(
+      135deg,
+      hsl(38, 92%, 50%) 0%,
+      hsl(25, 95%, 53%) 100%
+    );
+    --gradient-dark: linear-gradient(
+      135deg,
+      hsl(215, 35%, 15%) 0%,
+      hsl(217, 91%, 25%) 100%
+    );
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(215 35% 15% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(215 35% 15% / 0.1),
+      0 2px 4px -2px hsl(215 35% 15% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(215 35% 15% / 0.1),
+      0 4px 6px -4px hsl(215 35% 15% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(215 35% 15% / 0.1),
+      0 8px 10px -6px hsl(215 35% 15% / 0.1);
+    --shadow-glow: 0 0 40px hsl(217 91% 35% / 0.2);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 215 35% 10%;
+    --foreground: 210 40% 98%;
+
+    --card: 215 35% 13%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 215 35% 13%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 199 89% 55%;
+    --primary-foreground: 215 35% 10%;
+    --primary-hover: 199 89% 48%;
+
+    --secondary: 174 62% 40%;
+    --secondary-foreground: 0 0% 100%;
+
+    --accent: 38 92% 55%;
+    --accent-foreground: 215 35% 10%;
+
+    --muted: 215 30% 18%;
+    --muted-foreground: 215 20% 60%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 215 35% 10%;
+    --info: 199 89% 55%;
+    --info-foreground: 215 35% 10%;
+
+    --border: 215 30% 22%;
+    --input: 215 30% 22%;
+    --ring: 199 89% 55%;
+
+    --gradient-hero: linear-gradient(
+      135deg,
+      hsl(215, 35%, 15%) 0%,
+      hsl(217, 91%, 30%) 50%,
+      hsl(199, 89%, 40%) 100%
+    );
+    --gradient-card: linear-gradient(
+      180deg,
+      hsl(215, 35%, 13%) 0%,
+      hsl(215, 35%, 10%) 100%
+    );
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-lg border border-border/50 shadow-lg;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-hero);
+  }
+
+  .hero-gradient {
+    background: var(--gradient-hero);
+  }
+
+  .accent-gradient {
+    background: var(--gradient-accent);
+  }
+
+  .status-pending {
+    @apply bg-warning/20 text-warning border border-warning/30;
+  }
+
+  .status-in-progress {
+    @apply bg-info/20 text-info border border-info/30;
+  }
+
+  .status-resolved {
+    @apply bg-success/20 text-success border border-success/30;
+  }
+
+  .status-escalated {
+    @apply bg-destructive/20 text-destructive border border-destructive/30;
+  }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* Google Translate Customization */
+.google-translate-container {
+  display: flex;
+  align-items: center;
+}
+
+#google_translate_element {
+  line-height: normal !important;
+}
+
+/* Hide the "Powered by Google" branding safely */
+.goog-logo-link {
+  display: none !important;
+}
+
+.goog-te-gadget {
+  font-family: inherit !important;
+  font-size: 0 !important; /* Hide direct text nodes like "Powered by" */
+  color: transparent !important;
+  display: flex !important;
+  align-items: center;
+}
+
+/* Ensure the wrapper div for the combo remains visible */
+.goog-te-gadget > div {
+  display: inline-block !important; 
+}
+
+/* Specifically hide the span containing "Powered by" text if it exists as a separate element */
+/* .goog-te-gadget span { display: none !important; } */
+
+/* Style the dropdown combo box */
+.goog-te-combo {
+  appearance: none !important;
+  background-color: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: var(--radius) !important;
+  padding: 0.5rem 2rem 0.5rem 1rem !important; /* Extra padding right for chevron */
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+  color: hsl(var(--foreground)) !important;
+  font-family: inherit !important;
+  cursor: pointer !important;
+  outline: none !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: var(--shadow-sm) !important;
+  margin: 0 !important;
+  display: block !important; /* Ensure it is displayed */
+  
+  /* Custom Arrow */
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3e%3c/path%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+}
+
+.goog-te-combo:hover {
+  border-color: hsl(var(--primary)) !important;
+  background-color: hsl(var(--muted)) !important;
+}
+
+.goog-te-banner-frame.skiptranslate {
+  display: none !important; /* Try to hide the iframe banner if possible */
+}
+
+/* Hide other Google junk but keep combo wrapper */
+.goog-te-gadget .goog-te-combo {
+  margin: 0 !important;
+}
+
+/* Fix body shifting */
+body {
+  position: relative;
+  min-height: 100vh;
+  /* transition: top 0s !important; Prevent jerky transition if Google adds it */
+  top: 0 !important; /* Force top 0 to let us handle layout manually */
+}
+
+/* Mobile specific adjustments */
+@media (max-width: 768px) {
+  .goog-te-combo {
+    width: 100% !important;
+  }
+}
+
+/* Leaflet: keep map panes and controls below the fixed navbar and dialogs */
+.leaflet-container {
+  font: inherit;
+  isolation: isolate;
+  z-index: 0;
+}

@@ -117,6 +117,12 @@ class SurveyApiTest extends ApiTest {
                 .andExpect(jsonPath("$.questions[1].yes").value(2))
                 .andExpect(jsonPath("$.questions[2].textAnswers[0]").value("Very dark near the temple"));
 
+        // The creator finds it again in their managed list
+        mvc.perform(get("/api/v1/surveys/managed")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(area.authority().accessToken())))
+                .andExpect(jsonPath("$[0].id").value(id))
+                .andExpect(jsonPath("$[0].responseCount").value(2));
+
         // Closing stops further answers
         mvc.perform(post("/api/v1/surveys/" + id + "/close")
                         .header(HttpHeaders.AUTHORIZATION, bearer(area.authority().accessToken())))

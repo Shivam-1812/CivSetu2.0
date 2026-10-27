@@ -9,7 +9,8 @@ import com.civsetu.issue.entity.IssueStatus;
 
 /**
  * Resolved search filters. Every field is optional; null or empty means "no restriction".
- * Bounding box coordinates are WGS 84 degrees.
+ * Bounding box coordinates are WGS 84 degrees. {@code overdueAt} keeps only open issues whose
+ * deadline was before that instant.
  */
 public record IssueFilter(
         List<IssueStatus> statuses,
@@ -24,7 +25,8 @@ public record IssueFilter(
         Double minLongitude,
         Double minLatitude,
         Double maxLongitude,
-        Double maxLatitude) {
+        Double maxLatitude,
+        Instant overdueAt) {
 
     public boolean hasBoundingBox() {
         return minLongitude != null && minLatitude != null && maxLongitude != null && maxLatitude != null;

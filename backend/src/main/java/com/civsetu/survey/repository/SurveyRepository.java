@@ -27,6 +27,10 @@ public interface SurveyRepository extends JpaRepository<Survey, UUID> {
     @Query(value = "SELECT count(*) FROM survey_targets WHERE survey_id = :surveyId", nativeQuery = true)
     long countTargets(@Param("surveyId") UUID surveyId);
 
+    List<Survey> findByCreatedByOrderByCreatedAtDesc(UUID createdBy);
+
+    List<Survey> findAllByOrderByCreatedAtDesc();
+
     /** Surveys the user is invited to, newest first. */
     @Query(value = "SELECT s.* FROM surveys s JOIN survey_targets t ON t.survey_id = s.id "
             + "WHERE t.user_id = :userId ORDER BY s.created_at DESC", nativeQuery = true)

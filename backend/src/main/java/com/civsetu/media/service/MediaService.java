@@ -4,10 +4,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +27,7 @@ import com.civsetu.common.security.Caller;
 import com.civsetu.media.config.MediaProperties;
 import com.civsetu.media.dto.MediaBytes;
 import com.civsetu.media.dto.MediaContent;
+import com.civsetu.media.dto.MediaOverview;
 import com.civsetu.media.dto.MediaResponse;
 import com.civsetu.media.entity.IssueMedia;
 import com.civsetu.media.entity.MediaKind;
@@ -88,6 +93,27 @@ public class MediaService {
 
     public List<MediaResponse> listForIssue(UUID issueId) {
         return media.findByIssueIdOrderByCreatedAtAsc(issueId).stream().map(MediaResponse::from).toList();
+    }
+
+    /**
+     * Cover photo, photo count and voice-note flag for each issue, in one query (for list rows).
+     * Only the report's public photos provide a cover; issues without files map to {@link MediaOverview#NONE}.
+     */
+    public Map<UUID, MediaOverview> overview(Collection<UUID> issueIds) {
+        if (issueIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, List<IssueMedia>> byIssue = media.findByIssueIdInAndUpdateIdIsNullAndKindInOrderByCreatedAtAsc(
+                issueIds, EnumSet.of(MediaKind.IMAGE, MediaKind.VOICE)).stream()
+                .collect(Collectors.groupingBy(IssueMedia::getIssueId));
+        Map<UUID, MediaOverview> result = new HashMap<>();
+        byIssue.forEach((issueId, files) -> {
+            List<IssueMedia> photos = files.stream().filter(file -> file.getKind() == MediaKind.IMAGE).toList();
+            String cover = photos.isEmpty() ? null : MediaResponse.from(photos.get(0)).url();
+            boolean voice = files.stream().anyMatch(file -> file.getKind() == MediaKind.VOICE);
+            result.put(issueId, new MediaOverview(cover, photos.size(), voice));
+        });
+        return result;
     }
 
     /** The first report photos of an issue, for automatic analysis (no access check: system use only). */

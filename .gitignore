@@ -24,3 +24,9 @@ docs/*.zip
 # OS
 .DS_Store
 Thumbs.db
+
+# Local-only notes such as development account passwords
+*.local.md
+
+# Photos used to create local demo issues
+issue-images/

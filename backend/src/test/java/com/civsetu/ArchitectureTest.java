@@ -1,5 +1,6 @@
 package com.civsetu;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static com.tngtech.archunit.base.DescribedPredicate.describe;
 import static com.tngtech.archunit.base.DescribedPredicate.not;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
@@ -9,7 +10,11 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import jakarta.persistence.Entity;
@@ -117,6 +122,28 @@ class ArchitectureTest {
                 }
             }
         }
+    }
+
+    /**
+     * The OpenAPI document (and the frontend types generated from it) names schemas by simple class
+     * name, so two DTOs called e.g. "Question" would silently merge into one wrong type.
+     */
+    @Test
+    void dtoNamesAreUniqueBecauseTheyBecomeApiSchemaNames() {
+        Map<String, List<String>> byName = new TreeMap<>();
+        for (JavaClass javaClass : classes) {
+            if (javaClass.getPackageName().contains(".dto") && !javaClass.isAnonymousClass()) {
+                byName.computeIfAbsent(javaClass.getSimpleName(), name -> new ArrayList<>())
+                        .add(javaClass.getName());
+            }
+        }
+        Map<String, List<String>> duplicates = new TreeMap<>();
+        byName.forEach((name, owners) -> {
+            if (owners.size() > 1) {
+                duplicates.put(name, owners);
+            }
+        });
+        assertThat(duplicates).as("DTO classes sharing a simple name").isEmpty();
     }
 
     @Test

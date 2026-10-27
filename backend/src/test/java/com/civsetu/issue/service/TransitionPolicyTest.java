@@ -56,7 +56,13 @@ class TransitionPolicyTest {
                         ? REPORTING_CITIZEN : ASSIGNED_AUTHORITY;
                 String expected = rule.from().contains(status) ? "OK" : "INVALID_TRANSITION";
                 cases.add(Arguments.of(action, status, "right person", rightPerson, expected));
-                for (Caller wrong : List.of(COLLEAGUE, OTHER_DEPARTMENT_AUTHORITY, OTHER_CITIZEN, ADMIN,
+                if (rule.actor() == TransitionPolicy.Actor.DEPARTMENT_AUTHORITY) {
+                    // Any Authority of the department may work the issue, not only the assigned lead
+                    cases.add(Arguments.of(action, status, "department colleague", COLLEAGUE, expected));
+                } else {
+                    cases.add(Arguments.of(action, status, "department colleague", COLLEAGUE, "NOT_ALLOWED"));
+                }
+                for (Caller wrong : List.of(OTHER_DEPARTMENT_AUTHORITY, OTHER_CITIZEN, ADMIN,
                         rule.actor() == TransitionPolicy.Actor.REPORTER ? ASSIGNED_AUTHORITY : REPORTING_CITIZEN)) {
                     cases.add(Arguments.of(action, status, wrong.role() + " " + wrong.id(), wrong, "NOT_ALLOWED"));
                 }

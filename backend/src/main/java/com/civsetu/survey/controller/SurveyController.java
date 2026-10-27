@@ -54,6 +54,13 @@ class SurveyController {
         return surveys.create(Caller.from(jwt), request);
     }
 
+    /** Staff: surveys I created (Admins: all surveys). */
+    @GetMapping("/managed")
+    @PreAuthorize("hasAnyRole('AUTHORITY', 'ADMIN')")
+    List<SurveyDetailResponse> managed(@AuthenticationPrincipal Jwt jwt) {
+        return surveys.managed(Caller.from(jwt));
+    }
+
     /** Citizens: surveys I am invited to. */
     @GetMapping("/mine")
     @PreAuthorize("hasRole('CITIZEN')")

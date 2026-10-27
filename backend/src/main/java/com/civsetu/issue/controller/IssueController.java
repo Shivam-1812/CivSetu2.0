@@ -72,8 +72,9 @@ class IssueController {
 
     /** Filtered, paginated list, newest first. */
     @GetMapping
-    PageResponse<IssueSummaryResponse> search(@Valid IssueSearchParams params, Pageable pageable) {
-        return issues.search(params, pageable);
+    PageResponse<IssueSummaryResponse> search(@Valid IssueSearchParams params, Pageable pageable,
+            @AuthenticationPrincipal Jwt jwt) {
+        return issues.search(params, pageable, Caller.from(jwt));
     }
 
     /** Markers for a map viewport ({@code bbox} required). Accepts the same filters as the list. */

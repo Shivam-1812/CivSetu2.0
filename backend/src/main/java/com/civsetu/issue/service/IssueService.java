@@ -164,19 +164,19 @@ public class IssueService {
                 ? List.of(IssueStatus.ASSIGNED, IssueStatus.IN_PROGRESS)
                 : statuses;
         IssueFilter queue = new IssueFilter(wanted, null, null, null, null, null, null, null, authority.id(),
-                null, null, null, null);
-        return page(queue, pageable);
+                null, null, null, null, null);
+        return page(queue, pageable, authority);
     }
 
-    public PageResponse<IssueSummaryResponse> search(IssueSearchParams params, Pageable pageable) {
-        return page(toFilter(params), pageable);
+    public PageResponse<IssueSummaryResponse> search(IssueSearchParams params, Pageable pageable, Caller viewer) {
+        return page(toFilter(params), pageable, viewer);
     }
 
     /** The caller's own reports, newest first. */
     public PageResponse<IssueSummaryResponse> reportedBy(Caller caller, Pageable pageable) {
         IssueFilter mine = new IssueFilter(null, null, null, null, null, null, null, caller.id(), null,
-                null, null, null, null);
-        return page(mine, pageable);
+                null, null, null, null, null);
+        return page(mine, pageable, caller);
     }
 
     /** Markers for a map viewport; the bounding box is required. */
@@ -207,21 +207,21 @@ public class IssueService {
                 since, excludeId, duplicates.maxResults());
         Map<UUID, Issue> found = issues.findAllById(rows.stream().map(row -> (UUID) row[0]).toList()).stream()
                 .collect(Collectors.toMap(Issue::getId, Function.identity()));
-        IssueResponseMapper.Labels labels = mapper.labels();
+        Map<UUID, IssueSummaryResponse> summaries = mapper.summaries(found.values(), Caller.from(null));
         return rows.stream()
                 .filter(row -> found.containsKey((UUID) row[0]))
-                .map(row -> new SimilarIssueResponse(mapper.summary(found.get((UUID) row[0]), labels),
+                .map(row -> new SimilarIssueResponse(summaries.get((UUID) row[0]),
                         (int) Math.round(((Number) row[1]).doubleValue()),
                         Math.round(((Number) row[2]).doubleValue() * 100) / 100.0))
                 .toList();
     }
 
-    private PageResponse<IssueSummaryResponse> page(IssueFilter filter, Pageable pageable) {
+    private PageResponse<IssueSummaryResponse> page(IssueFilter filter, Pageable pageable, Caller viewer) {
         // Fixed order: client-supplied sort properties are ignored
         Pageable newestFirst = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), NEWEST_FIRST);
         Page<Issue> result = issues.findAll(IssueSpecifications.matching(filter), newestFirst);
-        IssueResponseMapper.Labels labels = mapper.labels();
-        return PageResponse.of(result, issue -> mapper.summary(issue, labels));
+        Map<UUID, IssueSummaryResponse> summaries = mapper.summaries(result.getContent(), viewer);
+        return PageResponse.of(result, issue -> summaries.get(issue.getId()));
     }
 
     private IssueFilter toFilter(IssueSearchParams params) {
@@ -239,6 +239,7 @@ public class IssueService {
         return new IssueFilter(params.status(), categoryId, params.department(), params.priority(), params.from(),
                 params.to(), params.q(), null, null,
                 box == null ? null : box.minLongitude(), box == null ? null : box.minLatitude(),
-                box == null ? null : box.maxLongitude(), box == null ? null : box.maxLatitude());
+                box == null ? null : box.maxLongitude(), box == null ? null : box.maxLatitude(),
+                Boolean.TRUE.equals(params.overdue()) ? clock.instant() : null);
     }
 }

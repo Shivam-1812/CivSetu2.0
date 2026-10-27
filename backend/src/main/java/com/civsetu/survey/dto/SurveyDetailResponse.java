@@ -22,8 +22,8 @@ public record SurveyDetailResponse(
         long invitedCount,
         long responseCount,
         boolean answeredByMe,
-        List<Question> questions) {
+        List<QuestionItem> questions) {
 
-    public record Question(UUID id, int position, String text, QuestionType type) {
+    public record QuestionItem(UUID id, int position, String text, QuestionType type) {
     }
 }

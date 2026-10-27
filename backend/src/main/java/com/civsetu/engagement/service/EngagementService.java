@@ -1,5 +1,7 @@
 package com.civsetu.engagement.service;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,6 +24,7 @@ import com.civsetu.common.web.PageResponse;
 import com.civsetu.engagement.config.EngagementProperties;
 import com.civsetu.engagement.dto.CommentAddedEvent;
 import com.civsetu.engagement.dto.CommentResponse;
+import com.civsetu.engagement.dto.EngagementSummary;
 import com.civsetu.engagement.dto.IssueRef;
 import com.civsetu.engagement.dto.ModerateCommentRequest;
 import com.civsetu.engagement.dto.VoteTally;
@@ -99,6 +102,33 @@ public class EngagementService {
 
     public long commentCount(UUID issueId) {
         return comments.countByIssueId(issueId);
+    }
+
+    /** Votes, comment counts and the viewer's vote for several issues, in three queries (for list rows). */
+    public Map<UUID, EngagementSummary> summaries(Collection<UUID> issueIds, Caller viewer) {
+        if (issueIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, long[]> counts = new HashMap<>();
+        for (Object[] row : votes.countByIssueIds(issueIds)) {
+            long[] tally = counts.computeIfAbsent((UUID) row[0], id -> new long[3]);
+            tally[row[1] == VoteValue.AGREE ? 0 : 1] = (Long) row[2];
+        }
+        for (Object[] row : comments.countByIssueIds(issueIds)) {
+            counts.computeIfAbsent((UUID) row[0], id -> new long[3])[2] = (Long) row[1];
+        }
+        Map<UUID, VoteValue> mine = new HashMap<>();
+        if (!viewer.isAnonymous()) {
+            for (Object[] row : votes.findValues(issueIds, viewer.id())) {
+                mine.put((UUID) row[0], (VoteValue) row[1]);
+            }
+        }
+        Map<UUID, EngagementSummary> result = new HashMap<>();
+        for (UUID id : issueIds) {
+            long[] tally = counts.getOrDefault(id, new long[3]);
+            result.put(id, new EngagementSummary(tally[0], tally[1], tally[2], mine.get(id)));
+        }
+        return result;
     }
 
     /** Comments oldest first, so a conversation reads top to bottom. */

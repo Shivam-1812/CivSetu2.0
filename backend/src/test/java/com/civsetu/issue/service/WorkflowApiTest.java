@@ -171,7 +171,7 @@ class WorkflowApiTest extends ApiTest {
     }
 
     @Test
-    void onlyTheAssignedAuthorityCanAct() throws Exception {
+    void onlyAuthoritiesOfTheDepartmentCanAct() throws Exception {
         Department dept = department(2);
         String id = reportIssue(registerCitizen(uniqueEmail("who")), "Damaged bus shelter", dept.category(), 18.5, 73.8);
         String assigned = assignee(id);
@@ -179,9 +179,7 @@ class WorkflowApiTest extends ApiTest {
                 .filter(session -> !session.userId().equals(assigned)).findFirst().orElseThrow();
         Session otherDepartment = staffSession("AUTHORITY", departmentIdByCode("WATER"));
 
-        for (Session wrong : List.of(colleague, otherDepartment)) {
-            plan(id, wrong).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("NOT_ALLOWED"));
-        }
+        plan(id, otherDepartment).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("NOT_ALLOWED"));
         // Admins and citizens cannot act on issues at all
         plan(id, adminSession()).andExpect(status().isForbidden());
         plan(id, registerCitizen(uniqueEmail("nosy"))).andExpect(status().isForbidden());
@@ -192,6 +190,8 @@ class WorkflowApiTest extends ApiTest {
                         .content("{\"priority\":\"LOW\",\"departmentId\":\"" + UUID.randomUUID() + "\"}"))
                 .andExpect(status().is4xxClientError());
         assertThat(JsonPath.<String>read(detail(id, null), "$.status")).isEqualTo("ASSIGNED");
+        // A colleague in the same department may pick it up
+        plan(id, colleague).andExpect(status().isOk());
     }
 
     @Test

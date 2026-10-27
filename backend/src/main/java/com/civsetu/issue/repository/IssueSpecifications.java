@@ -13,6 +13,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import com.civsetu.common.geo.GeoPoints;
 import com.civsetu.issue.entity.Issue;
+import com.civsetu.issue.entity.IssueStatus;
 
 /**
  * Turns an {@link IssueFilter} into one JPA query. Each filter maps to an indexed column:
@@ -57,6 +58,10 @@ public final class IssueSpecifications {
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("title")), pattern, LIKE_ESCAPE),
                         cb.like(cb.lower(root.get("description")), pattern, LIKE_ESCAPE)));
+            }
+            if (filter.overdueAt() != null) {
+                predicates.add(root.get("status").in(IssueStatus.REPORTED, IssueStatus.ASSIGNED, IssueStatus.IN_PROGRESS));
+                predicates.add(cb.lessThan(root.get("slaDueAt"), filter.overdueAt()));
             }
             if (filter.hasBoundingBox()) {
                 predicates.add(insideBox(cb, root.get("location"), filter));

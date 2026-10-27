@@ -27,8 +27,8 @@ public record CreateSurveyRequest(
         @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") Double centerLongitude,
         @NotNull @Min(50) @Max(5000) Integer radiusMeters,
         @NotNull @Future Instant closesAt,
-        @NotEmpty @Size(max = 10) List<@Valid Question> questions) {
+        @NotEmpty @Size(max = 10) List<@Valid NewQuestion> questions) {
 
-    public record Question(@NotBlank @Size(max = 300) String text, @NotNull QuestionType type) {
+    public record NewQuestion(@NotBlank @Size(max = 300) String text, @NotNull QuestionType type) {
     }
 }

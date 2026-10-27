@@ -1,5 +1,6 @@
 package com.civsetu.engagement.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,4 +31,13 @@ public interface IssueVoteRepository extends JpaRepository<IssueVote, UUID> {
 
     @Query("select v.value from IssueVote v where v.issueId = :issueId and v.userId = :userId")
     Optional<VoteValue> findValue(@Param("issueId") UUID issueId, @Param("userId") UUID userId);
+
+    /** Rows of [issueId, value, count] for several issues at once. */
+    @Query("select v.issueId, v.value, count(v) from IssueVote v where v.issueId in :issueIds "
+            + "group by v.issueId, v.value")
+    List<Object[]> countByIssueIds(@Param("issueIds") Collection<UUID> issueIds);
+
+    /** Rows of [issueId, value]: the user's votes among these issues. */
+    @Query("select v.issueId, v.value from IssueVote v where v.issueId in :issueIds and v.userId = :userId")
+    List<Object[]> findValues(@Param("issueIds") Collection<UUID> issueIds, @Param("userId") UUID userId);
 }

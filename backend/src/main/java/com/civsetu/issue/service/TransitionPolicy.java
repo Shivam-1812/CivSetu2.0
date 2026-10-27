@@ -22,8 +22,8 @@ final class TransitionPolicy {
     enum Action { PLAN, RESOLVE, REJECT, RETURN, MARK_DUPLICATE, REOPEN }
 
     enum Actor {
-        /** The Authority the system assigned to this issue. */
-        ASSIGNED_AUTHORITY,
+        /** An Authority of the issue's department (the system assigns one of them as the lead). */
+        DEPARTMENT_AUTHORITY,
         /** The citizen who reported the issue. */
         REPORTER
     }
@@ -33,14 +33,14 @@ final class TransitionPolicy {
 
     static final Map<Action, Rule> RULES = new EnumMap<>(Map.of(
             Action.MARK_DUPLICATE, new Rule(EnumSet.of(IssueStatus.ASSIGNED, IssueStatus.IN_PROGRESS),
-                    IssueStatus.DUPLICATE, Actor.ASSIGNED_AUTHORITY),
-            Action.PLAN, new Rule(EnumSet.of(IssueStatus.ASSIGNED), IssueStatus.IN_PROGRESS, Actor.ASSIGNED_AUTHORITY),
+                    IssueStatus.DUPLICATE, Actor.DEPARTMENT_AUTHORITY),
+            Action.PLAN, new Rule(EnumSet.of(IssueStatus.ASSIGNED), IssueStatus.IN_PROGRESS, Actor.DEPARTMENT_AUTHORITY),
             Action.RESOLVE, new Rule(EnumSet.of(IssueStatus.IN_PROGRESS), IssueStatus.RESOLVED,
-                    Actor.ASSIGNED_AUTHORITY),
+                    Actor.DEPARTMENT_AUTHORITY),
             Action.REJECT, new Rule(EnumSet.of(IssueStatus.ASSIGNED, IssueStatus.IN_PROGRESS), IssueStatus.REJECTED,
-                    Actor.ASSIGNED_AUTHORITY),
+                    Actor.DEPARTMENT_AUTHORITY),
             Action.RETURN, new Rule(EnumSet.of(IssueStatus.ASSIGNED, IssueStatus.IN_PROGRESS), IssueStatus.REPORTED,
-                    Actor.ASSIGNED_AUTHORITY),
+                    Actor.DEPARTMENT_AUTHORITY),
             Action.REOPEN, new Rule(EnumSet.of(IssueStatus.RESOLVED, IssueStatus.REJECTED, IssueStatus.DUPLICATE),
                     IssueStatus.ASSIGNED, Actor.REPORTER)));
 
@@ -51,14 +51,13 @@ final class TransitionPolicy {
     static void check(Action action, Issue issue, Caller caller) {
         Rule rule = RULES.get(action);
         boolean allowed = switch (rule.actor()) {
-            case ASSIGNED_AUTHORITY -> caller.is(issue.getAssignedAuthorityId())
-                    && caller.isAuthorityOf(issue.getDepartmentId());
+            case DEPARTMENT_AUTHORITY -> caller.isAuthorityOf(issue.getDepartmentId());
             case REPORTER -> caller.is(issue.getReporterId());
         };
         if (!allowed) {
             throw new ApiException(HttpStatus.FORBIDDEN, "NOT_ALLOWED", rule.actor() == Actor.REPORTER
                     ? "Only the citizen who reported this issue can do this."
-                    : "Only the Authority assigned to this issue can do this.");
+                    : "Only an Authority of this issue's department can do this.");
         }
         if (!rule.from().contains(issue.getStatus())) {
             throw new ApiException(HttpStatus.CONFLICT, "INVALID_TRANSITION",
